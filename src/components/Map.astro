@@ -1,9 +1,5 @@
 ---
 
-const TILES = [
-	["/tiles/vichy/15-16695-11640.png", "/tiles/vichy/15-16696-11640.png"],
-	["/tiles/vichy/15-16695-11641.png", "/tiles/vichy/15-16696-11641.png"],
-];
 ---
 
 <div class="app-map" _ngcontent-ng-c2150733359="" _nghost-ng-c1575046755="">
@@ -16,78 +12,82 @@ const TILES = [
                 alt="Map icon"
             /><h2 _ngcontent-ng-c1575046755="" class="section-title">MAP</h2>
         </div>
-        <a
-            _ngcontent-ng-c1575046755=""
-            class="map-static"
-            href="https://www.openstreetmap.org/?mlat=46.1271&amp;mlon=3.4261#map=16/46.1271/3.4261"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Open Vichy in OpenStreetMap"
-        >
-            {TILES.map((row) => (
-                <div class="map-static-row">
-                    {row.map((tile) => (
-                        <img
-                            class="map-static-tile"
-                            src={tile}
-                            alt=""
-                        />
-                    ))}
-                </div>
-            ))}
-            <span class="map-pin" aria-hidden="true"></span>
-            <span class="map-attribution"
-                >© OpenStreetMap © CARTO</span
-            >
-        </a>
+        <div
+            class="map-leaflet"
+            data-map
+            role="application"
+            aria-label="Interactive map of Vichy — drag to move, buttons to zoom"
+        ></div>
     </div>
 </div>
 
-<style>
-    :global(.column-2 > .app-map) {
-        flex: 0 0 auto;
-    }
-
-    .map-static {
-        position: relative;
-        display: block;
-        overflow: hidden;
-        flex-shrink: 0;
-        width: 100%;
-        aspect-ratio: 1 / 1;
-    }
-
-    .map-static-row {
+<style is:global>
+    .map-container {
         display: flex;
-        width: 100%;
-        height: 50%;
-    }
-
-    .map-static-row:last-child {
-        margin-top: -2px;
-    }
-
-    .map-static-tile {
-        width: 50%;
+        flex-direction: column;
         height: 100%;
-        object-fit: cover;
-        display: block;
+        min-height: 0;
+    }
+    .map-leaflet {
+        flex: 1 1 auto;
+        min-height: 220px;
+        width: 100%;
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--surface-muted);
+    }
+    /* theme the tiles (the site's --map-tile-filter already handles dark modes) */
+    .map-leaflet .leaflet-tile {
         filter: var(--map-tile-filter);
     }
-
+    .map-leaflet .leaflet-container {
+        background: var(--surface-muted);
+        font-family: inherit;
+    }
+    /* zoom controls in the site language */
+    .map-leaflet .leaflet-bar {
+        border: 1px solid var(--map-control-divider);
+        box-shadow: var(--map-marker-shadow);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    .map-leaflet .leaflet-bar a {
+        background: var(--map-control-bg);
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--map-control-divider);
+        width: 28px;
+        height: 28px;
+        line-height: 28px;
+    }
+    .map-leaflet .leaflet-bar a:hover,
+    .map-leaflet .leaflet-bar a:focus {
+        background: var(--map-control-bg-hover);
+        color: var(--text-heading);
+    }
+    .map-leaflet .leaflet-bar a.leaflet-disabled {
+        background: var(--map-control-bg);
+        color: var(--text-faint);
+    }
+    .map-leaflet .leaflet-control-attribution {
+        background: var(--map-attribution-bg);
+        color: var(--text-faint);
+        font-size: 9px;
+        backdrop-filter: blur(4px);
+    }
+    .map-leaflet .leaflet-control-attribution a {
+        color: var(--text-subtle);
+    }
+    /* pin marker (same look as before) */
     .map-pin {
-        position: absolute;
-        left: 42.5%;
-        top: 46.5%;
+        position: relative;
         width: 26px;
         height: 26px;
         border-radius: 50% 50% 50% 0;
         background: var(--map-marker-bg);
         border: 3px solid var(--map-marker-muted-bg);
-        transform: translate(-50%, -50%) rotate(-45deg);
+        transform: rotate(-45deg);
         box-shadow: var(--map-marker-shadow);
     }
-
     .map-pin::after {
         content: "";
         position: absolute;
@@ -99,20 +99,36 @@ const TILES = [
         background: var(--text-danger);
         transform: translate(-50%, -50%);
     }
-
-    .map-attribution {
-        position: absolute;
-        right: 4px;
-        bottom: 4px;
-        padding: 2px 5px;
-        border-radius: 4px;
-        font-size: 8px;
-        color: var(--text-faint);
-        background: color-mix(
-            in srgb,
-            var(--surface-page) 70%,
-            transparent
-        );
-        pointer-events: none;
-    }
 </style>
+
+<script>
+    import L from "leaflet";
+
+    const el = document.querySelector("[data-map]");
+    if (el) {
+        const vichy = [46.1271, 3.4261];
+        const map = L.map(el, {
+            center: vichy,
+            zoom: 15,
+            minZoom: 3,
+            maxZoom: 19,
+            scrollWheelZoom: false,
+            zoomControl: true,
+            attributionControl: true,
+        });
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+            attribution:
+                '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: "abcd",
+            maxZoom: 20,
+        }).addTo(map);
+
+        const pin = L.divIcon({
+            className: "",
+            html: '<span class="map-pin"></span>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 26],
+        });
+        L.marker(vichy, { icon: pin, title: "Vichy" }).addTo(map);
+    }
+</script>
