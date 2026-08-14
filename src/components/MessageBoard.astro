@@ -106,12 +106,15 @@
                 .join("");
         }
 
+        let current = [];
+
         async function load() {
             try {
                 const res = await fetch("/api/messages", { cache: "no-store" });
                 if (!res.ok) throw new Error();
                 const data = await res.json();
-                render(data.messages || []);
+                current = data.messages || [];
+                render(current);
             } catch {
                 board.innerHTML =
                     '<div class="board-state">Could not load the board. Try again later.</div>';
@@ -154,7 +157,8 @@
                 }
                 input.value = "";
                 input.placeholder = "Leave a message...";
-                render([data.message]);
+                current = [data.message, ...current].slice(0, 200);
+                render(current);
             } catch {
                 input.placeholder = "Could not send — try again.";
             } finally {
