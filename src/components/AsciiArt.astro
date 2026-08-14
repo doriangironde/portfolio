@@ -21,51 +21,25 @@
         const reduced = window.matchMedia(
             "(prefers-reduced-motion: reduce)",
         ).matches;
-        const FONT =
-            '"SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace';
 
-        const N = 16; // drifting particles — deliberately few
+        const N_SURFACE = 640; // hundreds of tiny particles
+        const N_ORBIT = 12; // orbiting just outside the surface
+        const N_DISTANT = 26; // restrained background field
+        const N_DRIFT = 6; // drift away and return
 
         let W = 0,
             H = 0,
-            dpr = 1,
-            cols = 0,
-            rows = 0,
-            pitch = 0,
-            fsize = 0;
-        let pal = [];
-        let base = null,
-            bctx = null;
-        let particles = [];
-        let breathDust = [];
+            dpr = 1;
+        let pal = null;
+        let surface = [],
+            orbiters = [],
+            distant = [];
         let t = 0,
             lastTs = 0,
             running = false,
             dt = 0.016;
 
-        function palette() {
-            const dark =
-                document.documentElement.dataset.colorScheme === "dark";
-            if (dark)
-                return [
-                    "#4E5D58",
-                    "#93A49E",
-                    "#C9D8D3",
-                    "#EAF4F1",
-                    "#4E8A77",
-                    "#7FC9B3",
-                ];
-            return [
-                "#98A8A2",
-                "#55645F",
-                "#242D2A",
-                "#162F29",
-                "#295B4F",
-                "#569F8C",
-            ];
-        }
-
-        const R = (() => {
+        const rnd = (() => {
             let s = 0x9e3779b9;
             return () => {
                 s |= 0;
@@ -76,39 +50,110 @@
             };
         })();
 
-        function spawnParticle(atStart) {
+        function palette() {
+            const dark =
+                document.documentElement.dataset.colorScheme === "dark";
+            if (dark)
+                return {
+                    deep: [234, 241, 238],
+                    gray: [110, 123, 118],
+                    teal: [78, 138, 119],
+                    mint: [127, 201, 179],
+                };
             return {
-                x: 0.08 + R() * 0.84,
-                y: atStart ? 0.1 + R() * 0.8 : 1.05 + R() * 0.08,
-                vy: 0.006 + R() * 0.013,
-                vx: (R() - 0.5) * 0.01,
-                swayA: 0.012 + R() * 0.028,
-                swayF: 0.25 + R() * 0.8,
-                ph: R() * 6.28,
-                life: 15 + R() * 15,
-                age: 0,
-                green: R() < 0.22,
-                bright: R() < 0.25,
+                deep: [22, 47, 41], // #162F29
+                gray: [142, 153, 148],
+                teal: [41, 91, 79], // #295B4F
+                mint: [86, 159, 140], // #569F8C
             };
         }
 
-        function buildBase() {
-            // a few very faint dots so the space feels intentional
-            for (let y = 0; y < rows; y++)
-                for (let x = 0; x < cols; x++) {
-                    const h = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-                    if (h - Math.floor(h) > 0.006) continue;
-                    bctx.fillStyle = pal[0];
-                    bctx.globalAlpha = 0.4;
-                    bctx.fillText("·", x * pitch + pitch / 2, y * fsize + fsize * 0.5);
-                }
-            bctx.globalAlpha = 1;
-            breathDust = [];
-            for (let i = 0; i < 12; i++) {
-                breathDust.push({
-                    x: 0.05 + R() * 0.9,
-                    y: 0.05 + R() * 0.9,
-                    ph: R() * 6.28,
+        const randUnit = () => {
+            const th = rnd() * 6.2832,
+                ph = Math.acos(2 * rnd() - 1);
+            return [
+                Math.sin(ph) * Math.cos(th),
+                Math.cos(ph),
+                Math.sin(ph) * Math.sin(th),
+            ];
+        };
+
+        const smooth = (x) => {
+            const e = x < 0 ? 0 : x > 1 ? 1 : x;
+            return e * e * (3 - 2 * e);
+        };
+
+        function build() {
+            // ---- sphere surface (fibonacci distribution + organic noise) ----
+            surface = [];
+            const ga = Math.PI * (3 - Math.sqrt(5));
+            for (let i = 0; i < N_SURFACE; i++) {
+                const y = 1 - (2 * (i + 0.5)) / N_SURFACE;
+                const rad = Math.sqrt(Math.max(0, 1 - y * y));
+                const th = i * ga;
+                let x = rad * Math.cos(th),
+                    z = rad * Math.sin(th);
+                // low-frequency displacement → gentle lumps, organic density
+                const p = 0.05;
+                x += p * Math.sin(y * 5.1 + i * 0.31) * Math.cos(th * 3.1 + i * 0.13);
+                z += p * Math.cos(y * 4.3 + i * 0.53) * Math.sin(th * 2.7 + i * 0.21);
+                const yy = y + p * Math.sin(y * 3.7 + i * 0.7);
+                const len = Math.hypot(x, yy, z) || 1;
+                const energy = i % 46 === 0; // mint points of energy (~14)
+                const teal = !energy && i % 27 === 0; // deep green sprinkling
+                surface.push({
+                    bx: x / len,
+                    by: yy / len,
+                    bz: z / len,
+                    rJ: 1 + (rnd() - 0.5) * 0.12,
+                    ph: rnd() * 6.28,
+                    sizeJ: 0.72 + rnd() * 0.5,
+                    energy,
+                    teal,
+                    eAxis: energy ? randUnit() : null,
+                    eSpeed: energy ? 0.03 + rnd() * 0.05 : 0,
+                    drift:
+                        i % Math.floor(N_SURFACE / N_DRIFT) === 0
+                            ? { mode: "idle", timer: 14 + rnd() * 26, prog: 0 }
+                            : null,
+                });
+            }
+
+            // ---- orbiters around the surface ----
+            orbiters = [];
+            for (let i = 0; i < N_ORBIT; i++) {
+                const axis = randUnit();
+                let ref = randUnit();
+                const dot = ref[0] * axis[0] + ref[1] * axis[1] + ref[2] * axis[2];
+                ref = [ref[0] - axis[0] * dot, ref[1] - axis[1] * dot, ref[2] - axis[2] * dot];
+                const rl = Math.hypot(...ref) || 1;
+                ref = [ref[0] / rl, ref[1] / rl, ref[2] / rl];
+                const w = [
+                    axis[1] * ref[2] - axis[2] * ref[1],
+                    axis[2] * ref[0] - axis[0] * ref[2],
+                    axis[0] * ref[1] - axis[1] * ref[0],
+                ];
+                orbiters.push({
+                    axis,
+                    ref,
+                    w,
+                    c: ref[0] * axis[0] + ref[1] * axis[1] + ref[2] * axis[2],
+                    speed: (rnd() < 0.5 ? -1 : 1) * (0.035 + rnd() * 0.06),
+                    ph: rnd() * 6.28,
+                    rad: 1.12 + rnd() * 0.16,
+                    mint: rnd() < 0.25,
+                });
+            }
+
+            // ---- distant field (very restrained) ----
+            distant = [];
+            for (let i = 0; i < N_DISTANT; i++) {
+                distant.push({
+                    x: 0.5 + (rnd() - 0.5) * 1.55,
+                    y: 0.47 + (rnd() - 0.5) * 1.45,
+                    tw: 0.1 + rnd() * 0.4,
+                    ph: rnd() * 6.28,
+                    mint: rnd() < 0.12,
                 });
             }
         }
@@ -118,34 +163,11 @@
             H = wrap.clientHeight;
             if (W < 40 || H < 40) return;
             dpr = Math.min(2, window.devicePixelRatio || 1);
-            fsize = clamp(W / 38, 11, 14);
-            ctx.font = `${fsize}px ${FONT}`;
-            try {
-                ctx.letterSpacing = "0px";
-            } catch {}
-            pitch = ctx.measureText("0").width || fsize * 0.6;
-            cols = Math.max(20, Math.floor(W / pitch));
-            rows = Math.max(20, Math.floor(H / fsize));
             canvas.width = W * dpr;
             canvas.height = H * dpr;
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.textBaseline = "middle";
-            base = document.createElement("canvas");
-            base.width = W * dpr;
-            base.height = H * dpr;
-            bctx = base.getContext("2d");
-            bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            bctx.font = ctx.font;
-            bctx.textBaseline = "middle";
             pal = palette();
-
-            buildBase();
-
-            if (!particles.length) {
-                for (let i = 0; i < N; i++) particles.push(spawnParticle(true));
-            }
-
-            ctx.drawImage(base, 0, 0, W, H);
+            if (!surface.length) build();
             drawFrame();
             if (!reduced && !running) {
                 running = true;
@@ -154,52 +176,206 @@
             }
         }
 
-        const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+        const F = 3.0; // perspective
+        const LIGHT = [-0.36, -0.72, 0.55]; // upper-left light
 
         function drawFrame() {
-            ctx.drawImage(base, 0, 0, W, H);
-            const px = (u) => u * cols * pitch + pitch / 2;
-            const py = (v) => v * rows * fsize + fsize * 0.5;
+            ctx.clearRect(0, 0, W, H);
 
-            // breathing dust
-            for (const d of breathDust) {
-                ctx.globalAlpha = 0.12 + 0.3 * (0.5 + 0.5 * Math.sin(t * 0.4 + d.ph));
-                ctx.fillStyle = pal[0];
-                ctx.fillText("·", px(d.x), py(d.y));
+            // sphere sits in a 2:3 portrait region, centered
+            const RAD = Math.min(0.42 * Math.min(W, H * 0.86), 0.36 * W, 0.4 * H);
+            const cx0 = W / 2,
+                cy0 = H * 0.47;
+
+            // distant field
+            for (const d of distant) {
+                const a =
+                    d.mint
+                        ? 0.09 + 0.07 * Math.sin(t * d.tw + d.ph)
+                        : 0.04 + 0.06 * (0.5 + 0.5 * Math.sin(t * d.tw + d.ph));
+                ctx.globalAlpha = a;
+                ctx.fillStyle = d.mint ? `rgb(${pal.mint})` : `rgb(${pal.gray})`;
+                const s = 1.1;
+                ctx.fillRect(d.x * W - s / 2, d.y * H - s / 2, s, s);
             }
             ctx.globalAlpha = 1;
 
-            // drifting particles
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
-                p.age += dt;
-                if (p.age > p.life) {
-                    particles[i] = spawnParticle(false);
-                    continue;
+            // rotation (slow yaw + gentle wobble)
+            const ry = t * 0.11,
+                cyr = Math.cos(ry),
+                sy = Math.sin(ry);
+            const rxp = 0.34 * Math.sin(t * 0.23),
+                cxr = Math.cos(rxp),
+                sxr = Math.sin(rxp);
+            const rzp = 0.14 * Math.sin(t * 0.17 + 2),
+                czr = Math.cos(rzp),
+                szr = Math.sin(rzp);
+
+            // breathing
+            const brG = 1 + 0.03 * Math.sin(t * 0.42);
+
+            for (const p of surface) {
+                // rotate base direction
+                let x = p.bx * cyr + p.bz * sy;
+                let z = -p.bx * sy + p.bz * cyr;
+                let y = p.by * cxr - z * sxr;
+                z = p.by * sxr + z * cxr;
+                const x2 = x * czr + y * szr;
+                y = -x * szr + y * czr;
+                x = x2;
+
+                // energy points glide across the surface
+                if (p.energy) {
+                    const [ax, ay, az] = p.eAxis;
+                    const a = p.eSpeed * t;
+                    const c = Math.cos(a),
+                        s = Math.sin(a),
+                        C = 1 - c;
+                    const nx =
+                        x * (c + ax * ax * C) +
+                        y * (ax * ay * C - az * s) +
+                        z * (ax * az * C + ay * s);
+                    const ny =
+                        x * (ay * ax * C + az * s) +
+                        y * (c + ay * ay * C) +
+                        z * (ay * az * C - ax * s);
+                    z =
+                        x * (az * ax * C - ay * s) +
+                        y * (az * ay * C + ax * s) +
+                        z * (c + az * az * C);
+                    x = nx;
+                    y = ny;
                 }
-                p.y -= p.vy * dt;
-                p.x += (p.vx + p.swayA * Math.sin(t * p.swayF + p.ph)) * dt;
-                if (p.y < -0.06) particles[i] = spawnParticle(false);
-            }
-            for (const p of particles) {
-                const a = Math.sin(Math.PI * Math.min(1, p.age / p.life));
-                if (a <= 0.02) continue;
-                ctx.globalAlpha = 0.9 * a;
-                if (p.green) {
-                    ctx.fillStyle = p.bright ? pal[5] : pal[4];
-                    ctx.fillText(
-                        "·°+·*"[((p.age * 1.1) | 0) % 5],
-                        px(p.x),
-                        py(p.y),
-                    );
+
+                // breathing + organic radius
+                let rad =
+                    brG *
+                    (1 +
+                        0.035 * Math.sin(t * 0.5 + p.ph) +
+                        0.02 * Math.sin(t * 0.31 + p.ph * 1.7));
+                // drift away and return
+                const d = p.drift;
+                if (d) {
+                    d.timer -= dt;
+                    if (d.mode === "idle" && d.timer <= 0) {
+                        d.mode = "out";
+                        d.prog = 0;
+                    } else if (d.mode === "out") {
+                        d.prog += dt / 5;
+                        if (d.prog >= 1) {
+                            d.mode = "hold";
+                            d.prog = 0;
+                        }
+                    } else if (d.mode === "hold") {
+                        d.prog += dt / 2.5;
+                        if (d.prog >= 1) {
+                            d.mode = "in";
+                            d.prog = 0;
+                        }
+                    } else if (d.mode === "in") {
+                        d.prog += dt / 6;
+                        if (d.prog >= 1) {
+                            d.mode = "idle";
+                            d.timer = 18 + rnd() * 30;
+                            d.prog = 1;
+                        }
+                    }
+                    const env = smooth(d.prog);
+                    rad *=
+                        d.mode === "idle"
+                            ? 1
+                            : d.mode === "out"
+                              ? 1 + 0.34 * env
+                              : d.mode === "hold"
+                                ? 1.34
+                                : 1 + 0.34 * (1 - env);
+                }
+
+                const scale = F / (F - z * rad * 0.95);
+                const sx = cx0 + x * rad * RAD * scale;
+                const sy2 = cy0 + y * rad * RAD * scale;
+
+                const depth = (z * rad + 1.35) / 2.7;
+                let alpha = 0.26 + 0.66 * Math.min(1, Math.max(0, depth));
+
+                // lighting
+                const L = x * LIGHT[0] + y * LIGHT[1] + z * LIGHT[2];
+                const shade = Math.min(1, Math.max(0, (1 - L) / 0.75)) * 0.85;
+                const size = 1.15 * scale * (0.72 + 0.5 * depth) * p.sizeJ;
+
+                if (p.energy) {
+                    const pulse = 0.55 + 0.4 * (0.5 + 0.5 * Math.sin(t * 1.15 + p.ph));
+                    ctx.globalAlpha = alpha * pulse;
+                    ctx.fillStyle = `rgb(${pal.mint})`;
+                    if (p.rJ > 1) {
+                        // faint halo on a few
+                        ctx.globalAlpha = alpha * pulse * 0.14;
+                        ctx.beginPath();
+                        ctx.arc(sx, sy2, size * 4.5, 0, 6.2832);
+                        ctx.fill();
+                    }
+                    ctx.globalAlpha = alpha * pulse;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy2, size * 1.25, 0, 6.2832);
+                    ctx.fill();
                 } else {
-                    ctx.fillStyle = p.bright ? pal[2] : pal[1];
-                    ctx.fillText(
-                        "·°··+·"[((p.age * 1.3) | 0) % 6],
-                        px(p.x),
-                        py(p.y),
-                    );
+                    if (p.teal) {
+                        ctx.globalAlpha = alpha * 0.9;
+                        ctx.fillStyle = `rgb(${pal.teal})`;
+                    } else {
+                        ctx.globalAlpha = alpha;
+                        const r = pal.deep[0] + (pal.gray[0] - pal.deep[0]) * shade;
+                        const g = pal.deep[1] + (pal.gray[1] - pal.deep[1]) * shade;
+                        const b = pal.deep[2] + (pal.gray[2] - pal.deep[2]) * shade;
+                        ctx.fillStyle = `rgb(${r | 0},${g | 0},${b | 0})`;
+                    }
+                    ctx.beginPath();
+                    ctx.arc(sx, sy2, size, 0, 6.2832);
+                    ctx.fill();
                 }
+            }
+            ctx.globalAlpha = 1;
+
+            // orbiters
+            for (const o of orbiters) {
+                const a = t * o.speed + o.ph;
+                const c = Math.cos(a),
+                    s = Math.sin(a),
+                    C = 1 - c;
+                let x =
+                    o.ref[0] * c +
+                    o.w[0] * s +
+                    o.axis[0] * o.c * C;
+                let y =
+                    o.ref[1] * c +
+                    o.w[1] * s +
+                    o.axis[1] * o.c * C;
+                const z =
+                    o.ref[2] * c +
+                    o.w[2] * s +
+                    o.axis[2] * o.c * C;
+                // same world rotation
+                const x1 = x * cyr + z * sy;
+                const z1 = -x * sy + z * cyr;
+                x = x1;
+                const y1 = y * cxr - z1 * sxr;
+                const z2 = y * sxr + z1 * cxr;
+                y = y1;
+                const x2 = x * czr + y * szr;
+                y = -x * szr + y * czr;
+                x = x2;
+
+                const rad = o.rad;
+                const scale = F / (F - z2 * rad * 0.95);
+                const sx = cx0 + x * rad * RAD * scale;
+                const sy2 = cy0 + y * rad * RAD * scale;
+                const depth = (z2 * rad + 1.35) / 2.7;
+                const alpha = 0.3 + 0.45 * Math.min(1, Math.max(0, depth));
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = o.mint ? `rgb(${pal.mint})` : `rgb(${pal.deep})`;
+                ctx.beginPath();
+                ctx.arc(sx, sy2, 1.4 * scale, 0, 6.2832);
+                ctx.fill();
             }
             ctx.globalAlpha = 1;
         }
@@ -212,7 +388,7 @@
             try {
                 drawFrame();
             } catch (e) {
-                console.error("ascii-art:", e);
+                console.error("particle-sphere:", e);
             }
             requestAnimationFrame(frame);
         }
