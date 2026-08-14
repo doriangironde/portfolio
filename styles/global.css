@@ -798,3 +798,28 @@ html[data-color-scheme="light"] .app-map .leaflet-tile {
   display: block;
   pointer-events: none;
 }
+
+/* message board: loading / empty / sending states */
+.board-state {
+  text-align: center;
+  color: var(--text-glass-subtle);
+  font-size: 13px;
+  font-style: italic;
+  margin-top: 40px;
+}
+.send-button.sending {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.send-button.sending .send-icon {
+  animation: board-send-pulse 0.9s ease-in-out infinite;
+}
+@keyframes board-send-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.8);
+  }
+}

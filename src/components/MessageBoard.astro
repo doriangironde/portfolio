@@ -20,47 +20,26 @@
                 </h2>
             </div>
         </div>
-        <div _ngcontent-ng-c3258774702="" class="messages-display">
-            <div _ngcontent-ng-c3258774702="" class="message-item">
-                <div _ngcontent-ng-c3258774702="" class="message-header">
-                    <span _ngcontent-ng-c3258774702="" class="message-author"
-                        >Dorian</span
-                    ><span
-                        _ngcontent-ng-c3258774702=""
-                        class="message-timestamp">Welcome</span>
-                </div>
-                <div _ngcontent-ng-c3258774702="" class="message-content">
-                    The new board is open. Leave a message — old-school
-                    web vibes welcome.
-                </div>
-            </div>
-            <div _ngcontent-ng-c3258774702="" class="message-item">
-                <div _ngcontent-ng-c3258774702="" class="message-header">
-                    <span _ngcontent-ng-c3258774702="" class="message-author"
-                        >Dorian</span
-                    ><span
-                        _ngcontent-ng-c3258774702=""
-                        class="message-timestamp">Setup</span>
-                </div>
-                <div _ngcontent-ng-c3258774702="" class="message-content">
-                    This board is a static snapshot for now. It will get a
-                    real backend soon.
-                </div>
-            </div>
+        <div
+            _ngcontent-ng-c3258774702=""
+            class="messages-display"
+            data-messages
+        >
+            <div _ngcontent-ng-c3258774702="" class="board-state">Loading…</div>
         </div>
         <div _ngcontent-ng-c3258774702="" class="input-section">
             <div _ngcontent-ng-c3258774702="" class="message-bubble">
                 <textarea
                     _ngcontent-ng-c3258774702=""
                     placeholder="Leave a message..."
-                    maxlength="100"
+                    maxlength="140"
                     class="message-input"
-                    style=""
+                    data-input
                 ></textarea
                 ><button
                     _ngcontent-ng-c3258774702=""
                     class="send-button liquid-glass"
-                    disabled=""
+                    data-send
                     ><svg
                         _ngcontent-ng-c3258774702=""
                         viewBox="0 0 24 24"
@@ -78,3 +57,119 @@
         </div>
     </div>
 </div>
+
+<script>
+    (() => {
+        const board = document.querySelector("[data-messages]");
+        const input = document.querySelector("[data-input]");
+        const sendBtn = document.querySelector("[data-send]");
+        if (!board || !input || !sendBtn) return;
+
+        const NAME_KEY = "msgboard-name";
+        let busy = false;
+
+        const esc = (s) =>
+            s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        function timeAgo(ts) {
+            const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+            if (s < 60) return "just now";
+            const m = Math.floor(s / 60);
+            if (m < 60) return `${m}m ago`;
+            const h = Math.floor(m / 60);
+            if (h < 24) return `${h}h ago`;
+            const d = Math.floor(h / 24);
+            if (d < 7) return `${d}d ago`;
+            return new Date(ts).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+            });
+        }
+
+        function render(messages) {
+            if (!messages.length) {
+                board.innerHTML =
+                    '<div class="board-state">No messages yet — say hi.</div>';
+                return;
+            }
+            board.innerHTML = messages
+                .map(
+                    (m) =>
+                        `<div class="message-item">
+                            <div class="message-header">
+                                <span class="message-author">${esc(m.author)}</span>
+                                <span class="message-timestamp">${timeAgo(m.ts)}</span>
+                            </div>
+                            <div class="message-content">${esc(m.text)}</div>
+                        </div>`,
+                )
+                .join("");
+        }
+
+        async function load() {
+            try {
+                const res = await fetch("/api/messages", { cache: "no-store" });
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                render(data.messages || []);
+            } catch {
+                board.innerHTML =
+                    '<div class="board-state">Could not load the board. Try again later.</div>';
+            }
+        }
+
+        async function send() {
+            if (busy) return;
+            const text = input.value.trim();
+            if (!text) return;
+
+            let name = "";
+            try {
+                name = localStorage.getItem(NAME_KEY) || "";
+            } catch {}
+            if (!name) {
+                name = (window.prompt("Your name (leave empty for Anonymous)") || "")
+                    .trim()
+                    .slice(0, 40);
+                if (name) {
+                    try {
+                        localStorage.setItem(NAME_KEY, name);
+                    } catch {}
+                }
+            }
+
+            busy = true;
+            sendBtn.classList.add("sending");
+            try {
+                const res = await fetch("/api/messages", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text, author: name }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    input.placeholder =
+                        data.error || "Could not send — try again.";
+                    return;
+                }
+                input.value = "";
+                input.placeholder = "Leave a message...";
+                render([data.message]);
+            } catch {
+                input.placeholder = "Could not send — try again.";
+            } finally {
+                busy = false;
+                sendBtn.classList.remove("sending");
+            }
+        }
+
+        sendBtn.addEventListener("click", send);
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send();
+            }
+        });
+        load();
+    })();
+</script>
