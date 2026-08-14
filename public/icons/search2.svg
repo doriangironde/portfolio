@@ -1,0 +1,10 @@
+<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+	<defs>
+		<image width="768" height="768" id="img1" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXNlYXJjaC1pY29uIGx1Y2lkZS1zZWFyY2giPjxwYXRoIGQ9Im0yMSAyMS00LjM0LTQuMzQiLz48Y2lyY2xlIGN4PSIxMSIgY3k9IjExIiByPSI4Ii8+PC9zdmc+"/>
+	</defs>
+	<style>
+		.s0 { fill: #000000 } 
+	</style>
+	<use id="search" href="#img1" transform="matrix(1.406,0,0,1.406,0,0)"/>
+	<path id="Layer 1" fill-rule="evenodd" class="s0" d="m495 736c-133.27 0-241-107.73-241-241 0-133.27 107.73-241 241-241 133.27 0 241 107.73 241 241 0 133.27-107.73 241-241 241z"/>
+</svg>

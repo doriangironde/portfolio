@@ -1,0 +1,218 @@
+---
+import {
+	emptyCalendar,
+	fetchContributionCalendar,
+	type ContributionDay,
+} from "../lib/github-contributions";
+
+const username = import.meta.env.GITHUB_USERNAME ?? "doriangironde";
+const token = import.meta.env.GITHUB_TOKEN;
+
+let calendar;
+let chartError: string | null = null;
+
+try {
+	if (!token) {
+		chartError = "Set the GITHUB_TOKEN environment variable to show the chart";
+	} else {
+		calendar = await fetchContributionCalendar(username, token);
+	}
+} catch (error) {
+	chartError =
+		error instanceof Error
+			? error.message
+			: "Failed to load the contribution chart";
+}
+
+if (!calendar) {
+	calendar = emptyCalendar(53);
+}
+
+const weekCount = calendar.weeks.length;
+
+const cells: Array<Array<ContributionDay | null>> = Array.from(
+	{ length: 7 },
+	() => Array(weekCount).fill(null),
+);
+
+calendar.weeks.forEach((week, weekIndex) => {
+	week.contributionDays.forEach((day) => {
+		cells[day.weekday][weekIndex] = day;
+	});
+});
+
+let lastMonth: number | null = null;
+const monthLabels = calendar.weeks.map((week) => {
+	const monday = week.contributionDays.find((day) => day.weekday === 1);
+	const day = monday ?? week.contributionDays[0];
+	if (!day) return "";
+	const date = new Date(`${day.date}T00:00:00`);
+	const month = date.getMonth();
+	if (month === lastMonth) return "";
+	lastMonth = month;
+	return date.toLocaleDateString("en-US", { month: "short" });
+});
+
+const DAY_LABELS: Record<number, string> = { 1: "Mon", 3: "Wed", 5: "Fri" };
+
+function levelClass(day: ContributionDay | null): string {
+	if (!day || day.level === 0) return "";
+	return `q${day.level}`;
+}
+
+function cellTitle(day: ContributionDay | null): string {
+	if (!day) return "";
+	const date = new Date(`${day.date}T00:00:00`);
+	const label = date.toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	});
+	const count = day.contributionCount;
+	return `${count} ${count === 1 ? "contribution" : "contributions"} on ${label}`;
+}
+---
+
+<div class="app-github" _ngcontent-ng-c2150733359="" _nghost-ng-c1395484746="">
+    <div _ngcontent-ng-c1395484746="" class="github">
+        <div _ngcontent-ng-c1395484746="" class="section-header">
+            <img
+                _ngcontent-ng-c1395484746=""
+                src="/icons/github.svg"
+                alt="Github Logo"
+                class="section-icon-github"
+            /><h2 _ngcontent-ng-c1395484746="" class="section-title">GITHUB</h2>
+        </div>
+        <div _ngcontent-ng-c1395484746="" class="github-contributions">
+            <div class="contributions-graph">
+                <div class="grid-months">
+                    {monthLabels.map((label) => (
+                        <span class="grid-month">{label}</span>
+                    ))}
+                </div>
+                <div
+                    class="grid-body"
+                    style={`grid-template-columns: 30px repeat(${weekCount}, 12px)`}
+                >
+                    {[0, 1, 2, 3, 4, 5, 6].map((row) => (
+                        <>
+                            <span class="grid-day-label">
+                                {DAY_LABELS[row] ?? ""}
+                            </span>
+                            {cells[row].map((day) => (
+                                <span
+                                    class={`grid-cell ${levelClass(day)}`}
+                                    title={day ? cellTitle(day) : undefined}
+                                ></span>
+                            ))}
+                        </>
+                    ))}
+                </div>
+            </div>
+            {chartError && <p class="chart-error">{chartError}</p>}
+        </div>
+    </div>
+</div>
+
+<script is:inline>
+    (() => {
+        const scrollToEnd = () => {
+            const container = document.querySelector(
+                ".github-contributions",
+            );
+            if (!container) return;
+            container.scrollLeft = container.scrollWidth;
+        };
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", scrollToEnd);
+        } else {
+            scrollToEnd();
+        }
+        window.addEventListener("load", scrollToEnd);
+    })();
+</script>
+
+<style>
+    .contributions-graph {
+        min-width: 850px;
+        padding: 8px 10px;
+        background: var(--github-chart-background);
+        border-radius: 6px;
+    }
+
+    .grid-months {
+        display: flex;
+        gap: 3px;
+        padding-left: 30px;
+        height: 16px;
+        margin-bottom: 3px;
+    }
+
+    .grid-month {
+        width: 12px;
+        font-size: 9px;
+        line-height: 16px;
+        color: var(--github-chart-label);
+        white-space: nowrap;
+        overflow: visible;
+    }
+
+    .grid-body {
+        display: grid;
+        grid-auto-flow: row;
+        gap: 3px;
+    }
+
+    .grid-day-label {
+        width: 30px;
+        font-size: 9px;
+        line-height: 12px;
+        color: var(--github-chart-label);
+        text-align: left;
+        overflow: visible;
+        white-space: nowrap;
+    }
+
+    .grid-cell {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        background: var(--github-chart-inactive);
+    }
+
+    .grid-cell.q1 {
+        background: color-mix(
+            in srgb,
+            var(--github-chart-min-activity) 80%,
+            var(--github-chart-max-activity) 20%
+        );
+    }
+
+    .grid-cell.q2 {
+        background: color-mix(
+            in srgb,
+            var(--github-chart-min-activity) 55%,
+            var(--github-chart-max-activity) 45%
+        );
+    }
+
+    .grid-cell.q3 {
+        background: color-mix(
+            in srgb,
+            var(--github-chart-min-activity) 30%,
+            var(--github-chart-max-activity) 70%
+        );
+    }
+
+    .grid-cell.q4 {
+        background: var(--github-chart-max-activity);
+    }
+
+    .chart-error {
+        margin: 6px 0 0;
+        font-size: 10px;
+        line-height: 1.4;
+        color: var(--text-danger);
+        opacity: 0.85;
+    }
+</style>

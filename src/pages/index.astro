@@ -1,17 +1,458 @@
 ---
+import About from "../components/About.astro";
+import StuffUsing from "../components/StuffUsing.astro";
+import Navigation from "../components/Navigation.astro";
+import Projects from "../components/Projects.astro";
+import AboutNotes from "../components/AboutNotes.astro";
+import X from "../components/X.astro";
+import Github from "../components/Github.astro";
 
+import Map from "../components/Map.astro";
+import MessageBoard from "../components/MessageBoard.astro";
+import LinkRow from "../components/LinkRow.astro";
+import LastFm from "../components/LastFm.astro";
+import "../../styles/global.css";
 ---
 
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+    <head>
+        <meta charset="utf-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+        <link rel="icon" type="image/svg+xml" href="/doriangironde-favicon.svg" />
+        <title>Dorian Gironde - Software Developer</title>
+        <meta
+            name="description"
+            content="Portfolio of Dorian Gironde - founder of Nero, a web agency in Vichy, France, and future AI engineer. Explore projects, my GitHub, and what I'm listening to."
+        />
+        <script is:inline>
+            (() => {
+                try {
+                    const storedTheme = localStorage.getItem("theme");
+                    const themeRegistry = [
+                        { id: "light", colorScheme: "light" },
+                        { id: "dark", colorScheme: "dark" },
+                        { id: "random", colorScheme: "dark" },
+                    ];
+                    const prefersDark = window.matchMedia(
+                        "(prefers-color-scheme: dark)",
+                    ).matches;
+                    const storedThemeEntry = themeRegistry.find(
+                        (entry) => entry.id === storedTheme,
+                    );
+                    const fallbackTheme = prefersDark ? "dark" : "light";
+                    const fallbackThemeEntry =
+                        themeRegistry.find(
+                            (entry) => entry.id === fallbackTheme,
+                        ) ?? themeRegistry[0];
+                    const theme = storedThemeEntry
+                        ? storedThemeEntry.id
+                        : fallbackThemeEntry
+                          ? fallbackThemeEntry.id
+                          : "light";
+                    let resolvedColorScheme = storedThemeEntry
+                        ? storedThemeEntry.colorScheme
+                        : fallbackThemeEntry
+                          ? fallbackThemeEntry.colorScheme
+                          : prefersDark
+                            ? "dark"
+                            : "light";
+
+                    const randomInt = (min, max) =>
+                        Math.floor(Math.random() * (max - min + 1)) + min;
+                    const hslToRgb = (hue, saturation, lightness) => {
+                        const s = saturation / 100;
+                        const l = lightness / 100;
+                        const chroma = (1 - Math.abs(2 * l - 1)) * s;
+                        const x = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+                        const match = l - chroma / 2;
+                        const [r1, g1, b1] =
+                            hue < 60
+                                ? [chroma, x, 0]
+                                : hue < 120
+                                  ? [x, chroma, 0]
+                                  : hue < 180
+                                    ? [0, chroma, x]
+                                    : hue < 240
+                                      ? [0, x, chroma]
+                                      : hue < 300
+                                        ? [x, 0, chroma]
+                                        : [chroma, 0, x];
+
+                        return {
+                            r: Math.round((r1 + match) * 255),
+                            g: Math.round((g1 + match) * 255),
+                            b: Math.round((b1 + match) * 255),
+                        };
+                    };
+                    const rgba = ({ r, g, b }, alpha) =>
+                        `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                    const hslToHex = (hue, saturation, lightness) => {
+                        const { r, g, b } = hslToRgb(
+                            hue,
+                            saturation,
+                            lightness,
+                        );
+                        return `#${[r, g, b].map((value) => value.toString(16).padStart(2, "0")).join("")}`;
+                    };
+                    const setRandomTheme = () => {
+                        const colorScheme =
+                            randomInt(0, 1) === 0 ? "dark" : "light";
+                        const hue = randomInt(0, 359);
+                        const accentHue = (hue + randomInt(18, 180)) % 360;
+                        const warmHue = (hue + randomInt(110, 260)) % 360;
+                        const saturation =
+                            colorScheme === "dark"
+                                ? randomInt(18, 72)
+                                : randomInt(14, 62);
+                        const accentSaturation = randomInt(42, 92);
+                        const accentLightness =
+                            colorScheme === "dark"
+                                ? randomInt(64, 76)
+                                : randomInt(42, 58);
+                        const successLightness =
+                            colorScheme === "dark"
+                                ? randomInt(62, 74)
+                                : randomInt(34, 48);
+                        const dangerLightness =
+                            colorScheme === "dark"
+                                ? randomInt(68, 78)
+                                : randomInt(46, 58);
+                        const dangerStrongLightness =
+                            colorScheme === "dark"
+                                ? randomInt(76, 84)
+                                : randomInt(36, 50);
+                        const baseLightness =
+                            colorScheme === "dark"
+                                ? randomInt(5, 16)
+                                : randomInt(90, 99);
+                        const mutedLightness =
+                            colorScheme === "dark"
+                                ? Math.min(baseLightness + randomInt(4, 16), 28)
+                                : Math.max(
+                                      baseLightness - randomInt(2, 12),
+                                      76,
+                                  );
+                        const hoverLightness =
+                            colorScheme === "dark"
+                                ? Math.min(
+                                      mutedLightness + randomInt(5, 14),
+                                      36,
+                                  )
+                                : Math.max(
+                                      mutedLightness - randomInt(3, 10),
+                                      64,
+                                  );
+                        const textPrimary = hslToHex(
+                            hue,
+                            34,
+                            colorScheme === "dark" ? 90 : 14,
+                        );
+                        const textBody = hslToHex(
+                            hue,
+                            24,
+                            colorScheme === "dark" ? 78 : 24,
+                        );
+                        const textSecondary = hslToHex(
+                            hue,
+                            20,
+                            colorScheme === "dark" ? 66 : 36,
+                        );
+                        const textMuted = hslToHex(
+                            hue,
+                            18,
+                            colorScheme === "dark" ? 54 : 48,
+                        );
+                        const textSubtle = hslToHex(
+                            hue,
+                            16,
+                            colorScheme === "dark" ? 42 : 60,
+                        );
+                        const textFaint = hslToHex(
+                            hue,
+                            14,
+                            colorScheme === "dark" ? 30 : 74,
+                        );
+                        const accent = hslToHex(
+                            accentHue,
+                            accentSaturation,
+                            accentLightness,
+                        );
+                        const success = hslToHex(
+                            (hue + 88) % 360,
+                            randomInt(46, 78),
+                            successLightness,
+                        );
+                        const danger = hslToHex(
+                            (warmHue + 24) % 360,
+                            randomInt(54, 82),
+                            dangerLightness,
+                        );
+                        const dangerStrong = hslToHex(
+                            (warmHue + 24) % 360,
+                            randomInt(60, 90),
+                            dangerStrongLightness,
+                        );
+                        const textRgb = hslToRgb(
+                            hue,
+                            34,
+                            colorScheme === "dark" ? 90 : 14,
+                        );
+                        const bodyRgb = hslToRgb(
+                            hue,
+                            24,
+                            colorScheme === "dark" ? 78 : 24,
+                        );
+                        const page = hslToHex(hue, saturation, baseLightness);
+                        const muted = hslToHex(hue, saturation, mutedLightness);
+                        const borderHover = hslToHex(
+                            hue,
+                            saturation,
+                            hoverLightness,
+                        );
+                        const shadowRgb = hslToRgb(
+                            hue,
+                            28,
+                            colorScheme === "dark" ? 4 : 34,
+                        );
+                        const iconFilter =
+                            colorScheme === "dark"
+                                ? "brightness(0) saturate(100%) invert(85%) sepia(14%) saturate(758%) hue-rotate(193deg) brightness(97%) contrast(92%)"
+                                : "brightness(0) saturate(100%) invert(29%) sepia(10%) saturate(432%) hue-rotate(182deg) brightness(93%) contrast(88%)";
+                        const rootStyle = document.documentElement.style;
+                        const tokens = {
+                            "--surface-page": page,
+                            "--surface-panel": page,
+                            "--surface-card": page,
+                            "--surface-muted": muted,
+                            "--surface-border": muted,
+                            "--surface-border-subtle": muted,
+                            "--surface-border-soft": muted,
+                            "--surface-border-hover": borderHover,
+                            "--scrollbar-thumb": rgba(textRgb, 0.18),
+                            "--scrollbar-thumb-hover": rgba(textRgb, 0.34),
+                            "--github-chart-background": page,
+                            "--projects-card-background": page,
+                            "--github-chart-inactive": muted,
+                            "--github-chart-min-activity": accent,
+                            "--github-chart-max-activity": success,
+                            "--github-chart-label": textPrimary,
+                            "--console-logo": hslToHex(warmHue, 62, 76),
+                            "--shadow-card": `0 4px 6px -1px ${rgba(shadowRgb, 0.26)}`,
+                            "--shadow-card-hover": `0 10px 15px -3px ${rgba(shadowRgb, 0.34)}`,
+                            "--shadow-media": `0 4px 12px ${rgba(shadowRgb, 0.3)}`,
+                            "--shadow-panel": `0px 3px 12px ${rgba(shadowRgb, 0.5)}`,
+                            "--icon-section-filter": iconFilter,
+                            "--icon-nav-filter": iconFilter,
+                            "--icon-inverse-filter": "brightness(0) invert(1)",
+                            "--icon-mono-filter": iconFilter,
+                            "--text-body": textBody,
+                            "--text-primary": textPrimary,
+                            "--text-heading": textPrimary,
+                            "--text-strong": textPrimary,
+                            "--text-secondary": textSecondary,
+                            "--text-muted": textMuted,
+                            "--text-subtle": textSubtle,
+                            "--text-faint": textFaint,
+                            "--text-section": textSubtle,
+                            "--text-placeholder": textSubtle,
+                            "--text-nav": textPrimary,
+                            "--text-contact": textBody,
+                            "--text-google": textPrimary,
+                            "--text-shoutout": textPrimary,
+                            "--text-shoutout-muted": textSubtle,
+                            "--text-inverse": "#ffffff",
+                            "--text-black": textPrimary,
+                            "--text-danger": danger,
+                            "--text-danger-strong": dangerStrong,
+                            "--text-success": success,
+                            "--text-success-bright": success,
+                            "--text-info": accent,
+                            "--text-accent-blue": rgba(
+                                hslToRgb(
+                                    accentHue,
+                                    accentSaturation,
+                                    accentLightness,
+                                ),
+                                0.85,
+                            ),
+                            "--text-overlay": rgba(textRgb, 0.86),
+                            "--text-overlay-muted": rgba(textRgb, 0.68),
+                            "--text-overlay-faint": rgba(textRgb, 0.35),
+                            "--text-glass-muted": rgba(bodyRgb, 0.8),
+                            "--text-glass-subtle": rgba(bodyRgb, 0.7),
+                            "--text-glass-faint": rgba(bodyRgb, 0.6),
+                            "--text-on-media": "rgba(255, 255, 255, 0.9)",
+                            "--text-on-media-muted":
+                                "rgba(255, 255, 255, 0.75)",
+                            "--text-on-media-subtle":
+                                "rgba(255, 255, 255, 0.7)",
+                            "--text-on-media-disabled":
+                                "rgba(255, 255, 255, 0.6)",
+                            "--text-live-url-arrow": "rgba(255, 255, 255, 0.8)",
+                            "--map-header-bg": rgba(
+                                hslToRgb(hue, saturation, baseLightness),
+                                0.88,
+                            ),
+                            "--map-control-bg": rgba(
+                                hslToRgb(hue, saturation, mutedLightness),
+                                0.9,
+                            ),
+                            "--map-control-bg-hover": rgba(
+                                hslToRgb(hue, saturation, hoverLightness),
+                                0.95,
+                            ),
+                            "--map-control-divider": rgba(textRgb, 0.08),
+                            "--map-tile-filter":
+                                colorScheme === "dark"
+                                    ? `sepia(0.26) hue-rotate(${hue}deg) saturate(0.78) brightness(0.88) contrast(0.98)`
+                                    : `sepia(0.12) hue-rotate(${hue}deg) saturate(0.92) brightness(1.02) contrast(0.96)`,
+                            "--map-attribution-bg": rgba(
+                                hslToRgb(hue, saturation, baseLightness),
+                                0.82,
+                            ),
+                            "--map-marker-bg": muted,
+                            "--map-marker-muted-bg": borderHover,
+                            "--map-marker-shadow": `0 2px 8px ${rgba(shadowRgb, 0.55)}`,
+                            "--map-popup-bg": muted,
+                            "--map-popup-shadow": `0 3px 16px ${rgba(shadowRgb, 0.7)}`,
+                            "--map-cluster-bg": rgba(
+                                hslToRgb(hue, saturation, mutedLightness),
+                                0.9,
+                            ),
+                            "--map-cluster-border": rgba(textRgb, 0.12),
+                            "--powerbar-backdrop": rgba(
+                                hslToRgb(hue, saturation, baseLightness),
+                                0.52,
+                            ),
+                            "--powerbar-panel-bg":
+                                "color-mix(in srgb, var(--surface-card) 90%, transparent)",
+                            "--powerbar-input-bg":
+                                "color-mix(in srgb, var(--surface-muted) 74%, transparent)",
+                            "--powerbar-result-active-bg":
+                                "color-mix(in srgb, var(--surface-muted) 76%, transparent)",
+                            "--powerbar-result-active-border":
+                                "var(--surface-border-hover)",
+                            "--powerbar-kbd-bg": "var(--surface-muted)",
+                            "--powerbar-kbd-border":
+                                "var(--surface-border-hover)",
+                            "--confetti-red": hslToHex(
+                                (warmHue + 18) % 360,
+                                74,
+                                72,
+                            ),
+                            "--confetti-orange": hslToHex(warmHue, 78, 66),
+                            "--confetti-yellow": hslToHex(
+                                (warmHue + 42) % 360,
+                                82,
+                                72,
+                            ),
+                            "--confetti-green": success,
+                            "--confetti-blue": accent,
+                            "--confetti-purple": hslToHex(
+                                (accentHue + 54) % 360,
+                                randomInt(56, 88),
+                                colorScheme === "dark"
+                                    ? randomInt(68, 80)
+                                    : randomInt(46, 62),
+                            ),
+                        };
+
+                        Object.entries(tokens).forEach(([property, value]) =>
+                            rootStyle.setProperty(property, value),
+                        );
+                        return colorScheme;
+                    };
+
+                    if (theme === "random") {
+                        resolvedColorScheme = setRandomTheme();
+                    }
+
+                    document.documentElement.dataset.theme = theme;
+                    document.documentElement.dataset.colorScheme =
+                        resolvedColorScheme;
+                    document.documentElement.style.colorScheme =
+                        resolvedColorScheme;
+                } catch {
+                    document.documentElement.dataset.theme = "light";
+                    document.documentElement.dataset.colorScheme = "light";
+                    document.documentElement.style.colorScheme = "light";
+                }
+            })();
+        </script>
+        <script is:inline>
+            document.addEventListener("DOMContentLoaded", () => {
+                const toggle = document.querySelector(".theme-toggle");
+                if (!toggle) return;
+                const order = ["light", "dark", "random"];
+                toggle.addEventListener("click", () => {
+                    const current =
+                        document.documentElement.dataset.theme || "light";
+                    const next =
+                        order[(order.indexOf(current) + 1) % order.length];
+                    localStorage.setItem("theme", next);
+                    location.reload();
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <div
+            class="app-shell site-frame"
+            _ngcontent-ng-c1138580453=""
+            _nghost-ng-c1138580453=""
+        >
+            <div _nghost-ng-c2150733359="">
+                <div class="main-content" _ngcontent-ng-c2150733359="">
+                    <div class="bento-grid" _ngcontent-ng-c2150733359="">
+                        <div
+                            class="column column-0"
+                            _ngcontent-ng-c2150733359=""
+                        >
+                            <About />
+                            <StuffUsing />
+                        </div>
+
+                        <div class="home-grid" _ngcontent-ng-c2150733359="">
+                            <Navigation />
+
+                            <div
+                                class="column column-1"
+                                _ngcontent-ng-c2150733359=""
+                            >
+                                <Projects />
+                                <AboutNotes />
+                            </div>
+
+                            <div
+                                class="columns-top"
+                                _ngcontent-ng-c2150733359=""
+                            >
+                                <div
+                                    class="column column-2"
+                                    _ngcontent-ng-c2150733359=""
+                                >
+                                    <Github />
+                                    <Map />
+                                    <LastFm />
+                                </div>
+                            </div>
+
+                            <div
+                                class="column column-3"
+                                _ngcontent-ng-c2150733359=""
+                            >
+                                <X />
+                                <MessageBoard />
+                            </div>
+
+                            <LinkRow />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
 </html>

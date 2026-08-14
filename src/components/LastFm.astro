@@ -1,0 +1,134 @@
+---
+import { getTopTracks } from "../lib/lastfm";
+
+const apiKey = import.meta.env.LASTFM_API_KEY;
+const username = import.meta.env.LASTFM_USERNAME ?? "dxus";
+
+let tracks = [];
+let error: string | null = null;
+
+try {
+	if (!apiKey) {
+		error = "Set the LASTFM_API_KEY environment variable to show the chart";
+	} else {
+		tracks = await getTopTracks(username, apiKey, 7, "7day");
+		if (tracks.length === 0) {
+			tracks = await getTopTracks(username, apiKey, 7, "overall");
+		}
+	}
+} catch (fetchError) {
+	error =
+		fetchError instanceof Error
+			? fetchError.message
+			: "Failed to load the top tracks";
+}
+
+const current = tracks[0];
+const stack = tracks.slice(1, 7);
+---
+
+<div _ngcontent-ng-c2803322931="" class="lastfm" tabindex="0">
+    <div _ngcontent-ng-c2803322931="" class="section-header">
+        <img
+            _ngcontent-ng-c2803322931=""
+            src="/icons/music.svg"
+            alt="LastFM Logo"
+            class="section-icon"
+        /><h2 _ngcontent-ng-c2803322931="" class="section-title">LASTFM</h2>
+    </div>
+    {error && <p _ngcontent-ng-c2803322931="" class="error">{error}</p>}
+    {current && (
+        <div _ngcontent-ng-c2803322931="" class="content-wrapper">
+            <div _ngcontent-ng-c2803322931="" class="blur-background">
+                <img
+                    _ngcontent-ng-c2803322931=""
+                    class="blur-image"
+                    src={current.image}
+                    alt={current.name}
+                />
+            </div>
+            <div _ngcontent-ng-c2803322931="" class="recent-tracks-stack">
+                {stack.map((track, index) => (
+                    <div
+                        _ngcontent-ng-c2803322931=""
+                        class={`recent-track-item art-${index}`}
+                    >
+                        <img
+                            _ngcontent-ng-c2803322931=""
+                            class="recent-album-art"
+                            src={track.image}
+                            alt={track.name}
+                        />
+                        <div
+                            _ngcontent-ng-c2803322931=""
+                            class="track-overlay"
+                        >
+                            <p
+                                _ngcontent-ng-c2803322931=""
+                                class="overlay-artist"
+                            >
+                                {track.artist}
+                            </p>
+                            <p
+                                _ngcontent-ng-c2803322931=""
+                                class="overlay-track"
+                            >
+                                {track.name} <span
+                                    _ngcontent-ng-c2803322931=""
+                                    class="overlay-playcount"
+                                    >- {track.playcount}</span
+                                >
+                            </p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div _ngcontent-ng-c2803322931="" class="current-track">
+                <div
+                    _ngcontent-ng-c2803322931=""
+                    class="album-art-container"
+                >
+                    <img
+                        _ngcontent-ng-c2803322931=""
+                        class="album-art"
+                        src={current.image}
+                        alt={current.name}
+                    />
+                    <div
+                        _ngcontent-ng-c2803322931=""
+                        class="track-overlay main-overlay"
+                    >
+                        <p
+                            _ngcontent-ng-c2803322931=""
+                            class="overlay-artist"
+                        >
+                            {current.artist}
+                        </p>
+                        <p
+                            _ngcontent-ng-c2803322931=""
+                            class="overlay-track"
+                        >
+                            {current.name} <span
+                                _ngcontent-ng-c2803322931=""
+                                class="overlay-playcount"
+                                >- {current.playcount}</span
+                            >
+                        </p>
+                    </div>
+                </div>
+                <div _ngcontent-ng-c2803322931="" class="track-info">
+                    <p _ngcontent-ng-c2803322931="" class="track-name">
+                        {current.name} <span
+                            _ngcontent-ng-c2803322931=""
+                            class="playcount"
+                            >- {current.playcount}</span
+                        >
+                    </p>
+                    <p _ngcontent-ng-c2803322931="" class="artist-name">
+                        {current.artist}
+                    </p>
+                </div>
+            </div>
+        </div>
+    )}
+</div>
