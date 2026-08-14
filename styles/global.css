@@ -292,10 +292,10 @@ body::-webkit-scrollbar-thumb:active, ::-webkit-scrollbar-thumb:active { backgro
 .app-gallery-music-row[_ngcontent-ng-c2150733359] { height: 22vh; flex-shrink: 0; width: 100%; }
 .column-2[_ngcontent-ng-c2150733359] > .app-map[_ngcontent-ng-c2150733359] { flex: 0 0 auto; min-height: 0px; margin-top: -5px; }
 .app-link-row[_ngcontent-ng-c2150733359] { grid-area: 3 / 2 / 4 / 4; flex-shrink: 0; width: 100%; overflow: visible; }
-.app-about-me[_ngcontent-ng-c2150733359] { flex: 38 0 0%; min-height: 0px; }
+.app-about-me[_ngcontent-ng-c2150733359] { flex: 40 0 0%; min-height: 0px; }
 .app-blog[_ngcontent-ng-c2150733359] { flex: 24 1 0%; min-height: 0px; }
-.app-stuff-using[_ngcontent-ng-c2150733359] { flex: 34 0 0%; }
-.app-ascii-art { flex: 42 0 0%; min-height: 0px; }
+.app-stuff-using[_ngcontent-ng-c2150733359] { flex: 36 0 0%; }
+.app-ascii-art { flex: 30 0 0%; min-height: 0px; }
 .app-shoutouts[_ngcontent-ng-c2150733359] { flex: 15 0 0%; }
 .app-github[_ngcontent-ng-c2150733359] { flex: 15.2 0 0%; }
 @media (min-width: 1440px) {
@@ -318,7 +318,7 @@ body::-webkit-scrollbar-thumb:active, ::-webkit-scrollbar-thumb:active { backgro
   .column-0[_ngcontent-ng-c2150733359] > .app-about-me[_ngcontent-ng-c2150733359] { min-height: 280px; }
   .column-0[_ngcontent-ng-c2150733359] > .app-blog[_ngcontent-ng-c2150733359] { min-height: 190px; }
   .column-0[_ngcontent-ng-c2150733359] > .app-stuff-using[_ngcontent-ng-c2150733359] { min-height: 500px; }
-  .column-0 > .app-ascii-art { min-height: 380px; }
+  .column-0 > .app-ascii-art { min-height: 260px; }
   .home-grid[_ngcontent-ng-c2150733359] { display: grid; grid-template-columns: repeat(2, minmax(0px, 1fr)); grid-template-rows: auto auto auto auto; gap: 16px; height: auto; align-items: stretch; }
   .app-navigation[_ngcontent-ng-c2150733359] { grid-area: 1 / 1 / auto / -1; position: sticky; top: 12px; }
   .column-1[_ngcontent-ng-c2150733359] { grid-area: 2 / 1; height: clamp(760px, 100dvh - 104px, 980px); }
@@ -336,7 +336,7 @@ body::-webkit-scrollbar-thumb:active, ::-webkit-scrollbar-thumb:active { backgro
   .column-0[_ngcontent-ng-c2150733359] { display: grid; grid-template-columns: repeat(2, minmax(0px, 1fr)); gap: 16px; }
   .column-0[_ngcontent-ng-c2150733359] > .app-about-me[_ngcontent-ng-c2150733359], .column-0[_ngcontent-ng-c2150733359] > .app-blog[_ngcontent-ng-c2150733359] { min-height: 280px; }
   .column-0[_ngcontent-ng-c2150733359] > .app-stuff-using[_ngcontent-ng-c2150733359] { grid-column: 1 / -1; min-height: 420px; }
-  .column-0 > .app-ascii-art { min-height: 300px; }
+  .column-0 > .app-ascii-art { min-height: 240px; }
 }
 @media (max-width: 1024px) {
   .main-content[_ngcontent-ng-c2150733359] { flex-direction: column; height: auto; min-height: 100dvh; overflow-y: auto; padding: 96px max(12px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); display: block; }
@@ -347,7 +347,7 @@ body::-webkit-scrollbar-thumb:active, ::-webkit-scrollbar-thumb:active { backgro
   .columns-top[_ngcontent-ng-c2150733359] { gap: 20px; }
   .app-about-me[_ngcontent-ng-c2150733359], .app-projects[_ngcontent-ng-c2150733359], .app-blog[_ngcontent-ng-c2150733359], .app-link-row[_ngcontent-ng-c2150733359], .app-stuff-using[_ngcontent-ng-c2150733359], .app-github[_ngcontent-ng-c2150733359], .app-message-board[_ngcontent-ng-c2150733359], .app-shoutouts[_ngcontent-ng-c2150733359], .app-ascii-art { height: auto; width: 100%; flex: 0 0 auto; min-height: 0px; }
   .app-about-me[_ngcontent-ng-c2150733359] { order: 1; }
-  .app-ascii-art { order: 3; aspect-ratio: 2 / 3; max-height: 560px; }
+  .app-ascii-art { order: 3; aspect-ratio: 4 / 5; max-height: 480px; }
   .app-projects[_ngcontent-ng-c2150733359] { order: 2; }
   .app-discord-component[_ngcontent-ng-c2150733359] { order: 3; }
   .app-link-row[_ngcontent-ng-c2150733359] { order: 4; margin-top: 20px; margin-bottom: 20px; }
