@@ -11,9 +11,9 @@ try {
 	if (!apiKey) {
 		error = "Set the LASTFM_API_KEY environment variable to show the chart";
 	} else {
-		tracks = await getTopTracks(username, apiKey, 7, "7day");
+		tracks = await getTopTracks(username, apiKey, 9, "7day");
 		if (tracks.length === 0) {
-			tracks = await getTopTracks(username, apiKey, 7, "overall");
+			tracks = await getTopTracks(username, apiKey, 9, "overall");
 		}
 	}
 } catch (fetchError) {
@@ -24,7 +24,7 @@ try {
 }
 
 const current = tracks[0];
-const stack = tracks.slice(1, 7);
+const stack = tracks.slice(1, 9);
 ---
 
 <div _ngcontent-ng-c2803322931="" class="lastfm" tabindex="0">
