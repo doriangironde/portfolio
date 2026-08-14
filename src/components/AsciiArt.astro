@@ -39,8 +39,7 @@
             running = false,
             dt = 0.016;
         let hover = 0,
-            hoverTarget = 0,
-            ripple = { t: 1, active: false };
+            hoverTarget = 0;
         let glowGrad = null;
 
         const rnd = (() => {
@@ -208,7 +207,7 @@
             const h = smooth(hover);
 
             // sphere sits in a 2:3 portrait region, centered
-            const RAD = Math.min(0.42 * Math.min(W, H * 0.86), 0.36 * W, 0.4 * H) * (1 + 0.05 * h);
+            const RAD = Math.min(0.42 * Math.min(W, H * 0.86), 0.36 * W, 0.4 * H);
             const cx0 = W / 2,
                 cy0 = H * 0.47;
 
@@ -227,7 +226,7 @@
                     g.addColorStop(1, `rgba(${ACC[0]},${ACC[1]},${ACC[2]},0)`);
                     glowGrad = g;
                 }
-                ctx.globalAlpha = 0.09 * h;
+                ctx.globalAlpha = 0.06 * h;
                 ctx.fillStyle = glowGrad;
                 ctx.beginPath();
                 ctx.arc(cx0, cy0, RAD * 1.5, 0, 6.2832);
@@ -237,7 +236,7 @@
 
             // distant field
             for (const d of distant) {
-                const a = 0.05 + 0.06 * (0.5 + 0.5 * Math.sin(t * d.tw + d.ph)) + 0.05 * h;
+                const a = 0.05 + 0.06 * (0.5 + 0.5 * Math.sin(t * d.tw + d.ph));
                 ctx.globalAlpha = a;
                 ctx.fillStyle = `rgb(${ACC[0]},${ACC[1]},${ACC[2]})`;
                 const s = 1.3;
@@ -245,8 +244,8 @@
             }
             ctx.globalAlpha = 1;
 
-            // rotation (slow yaw + gentle wobble, speeds up on hover)
-            const ry = t * (0.11 + 0.17 * h),
+            // rotation (slow yaw + gentle wobble, barely faster on hover)
+            const ry = t * (0.11 + 0.05 * h),
                 cyr = Math.cos(ry),
                 sy = Math.sin(ry);
             const rxp = 0.34 * Math.sin(t * 0.23),
@@ -256,18 +255,8 @@
                 czr = Math.cos(rzp),
                 szr = Math.sin(rzp);
 
-            // breathing (stronger on hover)
-            const brG = 1 + 0.03 * (1 + 0.7 * h) * Math.sin(t * (0.42 + 0.25 * h));
-
-            // entrance ripple (one swell on hover-in)
-            if (ripple.active) {
-                ripple.t += dt / 1.4;
-                if (ripple.t >= 1) {
-                    ripple.t = 1;
-                    ripple.active = false;
-                }
-            }
-            const rip = ripple.active ? 1 + 0.055 * Math.sin(Math.PI * ripple.t) : 1;
+            // breathing
+            const brG = 1 + 0.03 * Math.sin(t * 0.42);
 
             for (const p of surface) {
                 // rotate base direction
@@ -279,10 +268,10 @@
                 y = -x * szr + y * czr;
                 x = x2;
 
-                // energy points glide across the surface (faster on hover)
+                // energy points glide across the surface
                 if (p.energy) {
                     const [ax, ay, az] = p.eAxis;
-                    const a = p.eSpeed * (1 + 0.9 * h) * t;
+                    const a = p.eSpeed * t;
                     const c = Math.cos(a),
                         s = Math.sin(a),
                         C = 1 - c;
@@ -302,13 +291,12 @@
                     y = ny;
                 }
 
-                // breathing + organic radius + ripple
+                // breathing + organic radius
                 let rad =
                     brG *
                     (1 +
                         0.035 * Math.sin(t * 0.5 + p.ph) +
-                        0.02 * Math.sin(t * 0.31 + p.ph * 1.7)) *
-                    rip;
+                        0.02 * Math.sin(t * 0.31 + p.ph * 1.7));
 
                 // drift away and return
                 const d = p.drift;
@@ -353,24 +341,23 @@
                 const sy2 = cy0 + y * rad * RAD * scale;
 
                 const depth = (z * rad + 1.35) / 2.7;
-                let alpha = (0.26 + 0.66 * Math.min(1, Math.max(0, depth))) * (0.85 + 0.15 * h);
+                const alpha = 0.26 + 0.66 * Math.min(1, Math.max(0, depth));
 
                 // lighting
                 const L = x * LIGHT[0] + y * LIGHT[1] + z * LIGHT[2];
                 const shade = Math.min(1, Math.max(0, (1 - L) / 0.75)) * 0.8;
-                const size =
-                    1.7 * scale * (0.72 + 0.5 * depth) * p.sizeJ * (1 + 0.1 * h);
+                const size = 1.7 * scale * (0.72 + 0.5 * depth) * p.sizeJ;
 
                 if (p.energy) {
-                    const pulse = 0.55 + 0.4 * (0.5 + 0.5 * Math.sin(t * (1.15 + 1.1 * h) + p.ph));
+                    const pulse = 0.55 + 0.4 * (0.5 + 0.5 * Math.sin(t * 1.15 + p.ph));
                     // halo
-                    ctx.globalAlpha = alpha * pulse * (0.12 + 0.1 * h);
+                    ctx.globalAlpha = alpha * pulse * 0.12;
                     ctx.fillStyle = `rgb(${ACC[0]},${ACC[1]},${ACC[2]})`;
                     ctx.beginPath();
                     ctx.arc(sx, sy2, size * 4.5, 0, 6.2832);
                     ctx.fill();
                     // core
-                    ctx.globalAlpha = Math.min(1, alpha * (pulse + 0.3 * h));
+                    ctx.globalAlpha = Math.min(1, alpha * pulse);
                     ctx.beginPath();
                     ctx.arc(sx, sy2, size * 1.5, 0, 6.2832);
                     ctx.fill();
@@ -386,7 +373,7 @@
 
             // orbiters
             for (const o of orbiters) {
-                const a = t * o.speed * (1 + 0.5 * h) + o.ph;
+                const a = t * o.speed + o.ph;
                 const c = Math.cos(a),
                     s = Math.sin(a),
                     C = 1 - c;
@@ -409,7 +396,7 @@
                 const sx = cx0 + x * rad * RAD * scale;
                 const sy2 = cy0 + y * rad * RAD * scale;
                 const depth = (z2 * rad + 1.35) / 2.7;
-                const alpha = (0.3 + 0.45 * Math.min(1, Math.max(0, depth))) * (0.85 + 0.15 * h);
+                const alpha = 0.3 + 0.45 * Math.min(1, Math.max(0, depth));
                 ctx.globalAlpha = alpha;
                 ctx.fillStyle = `rgb(${ACC[0]},${ACC[1]},${ACC[2]})`;
                 ctx.beginPath();
@@ -436,10 +423,6 @@
         if (!reduced) {
             wrap.addEventListener("mouseenter", () => {
                 hoverTarget = 1;
-                if (!ripple.active) {
-                    ripple.active = true;
-                    ripple.t = 0;
-                }
             });
             wrap.addEventListener("mouseleave", () => {
                 hoverTarget = 0;
