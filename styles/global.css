@@ -609,7 +609,7 @@ html[data-color-scheme="dark"][_ngcontent-ng-c3515322307] .tech-badge-image[_ngc
 .section-icon-github[_ngcontent-ng-c1395484746] { height: 19px; width: 19px; filter: var(--icon-section-filter); }
 .github-contributions[_ngcontent-ng-c1395484746] { width: 100%; max-width: 100%; flex: 1 1 0%; overflow: auto hidden; position: relative; }
 .github-contributions[_ngcontent-ng-c1395484746] .app-github-contributions-chart[_ngcontent-ng-c1395484746] { display: block; width: 100%; }
-.github-contributions[_ngcontent-ng-c1395484746] .contributions-graph[_ngcontent-ng-c1395484746] { width: 100%; min-width: 850px; height: 100%; min-height: 130px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; overflow: hidden; }
+.github-contributions[_ngcontent-ng-c1395484746] .contributions-graph[_ngcontent-ng-c1395484746] { width: 100%; min-width: 0; height: 100%; min-height: 130px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; overflow: hidden; }
 @media (max-width: 1024px) {
   .github[_ngcontent-ng-c1395484746] { max-height: none; min-height: 180px; height: auto; }
 }
@@ -772,7 +772,7 @@ html[data-color-scheme="dark"][_nghost-ng-c2803322931] .album-art[_ngcontent-ng-
 .contributions-scroll[_ngcontent-ng-c1276827833]::-webkit-scrollbar-thumb { background: transparent; border-radius: 999px; transition: background-color 0.18s; }
 .contributions-scroll[_ngcontent-ng-c1276827833]:hover::-webkit-scrollbar-thumb, .contributions-scroll[_ngcontent-ng-c1276827833]:focus-within::-webkit-scrollbar-thumb, .contributions-scroll.is-scrolling[_ngcontent-ng-c1276827833]::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); }
 .contributions-scroll[_ngcontent-ng-c1276827833]::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
-.contributions-graph[_ngcontent-ng-c1276827833] { width: 100%; min-width: 850px; height: 130px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; display: block; background: var(--github-chart-background); }
+.contributions-graph[_ngcontent-ng-c1276827833] { width: 100%; min-width: 0; height: 130px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; display: block; background: var(--github-chart-background); }
 .contributions-placeholder[_ngcontent-ng-c1276827833] { border-radius: 4px; }
 html[data-color-scheme="light"] .app-map .leaflet-tile {
   filter: saturate(0.18) brightness(1.03) contrast(0.92);
