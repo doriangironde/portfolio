@@ -7,13 +7,6 @@
         <div class="ascii-art-canvas-wrap">
             <canvas class="ascii-art-canvas" aria-hidden="true"></canvas>
         </div>
-        <div class="ascii-footer">
-            <span class="ascii-footer-item"
-                ><span class="ascii-live-dot" aria-hidden="true"></span
-                >Generative Field</span
-            >
-            <span class="ascii-footer-item">DG·01</span>
-        </div>
     </div>
 </div>
 
@@ -31,6 +24,28 @@
         const FONT =
             '"SF Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace';
 
+        /* ---------------------------------------------------------------
+           ONE shape: a ribbon of characters that rises, loops at the top
+           and crosses itself — density forms the silhouette.
+        --------------------------------------------------------------- */
+        const CP = [
+            [0.26, 0.94],
+            [0.4, 0.76],
+            [0.5, 0.52],
+            [0.64, 0.34],
+            [0.7, 0.18],
+            [0.52, 0.07],
+            [0.33, 0.13],
+            [0.25, 0.3],
+            [0.33, 0.42],
+            [0.5, 0.52],
+            [0.56, 0.7],
+            [0.62, 0.84],
+            [0.7, 0.94],
+        ];
+        const FRONT_T = 0.6; // the descending pass is the front layer
+        const WMAX = 0.095; // ribbon half-width (normalized)
+
         let W = 0,
             H = 0,
             dpr = 1,
@@ -41,30 +56,16 @@
         let pal = [];
         let base = null,
             bctx = null;
-        let S = null;
-        let particles = [],
-            embers = [],
-            breathing = [];
-        let glitch = { active: false, next: 5 },
-            morph = { active: false, next: 6 };
+        let curve = []; // {u,v,t,w,tx,ty,front} sampled centerline
+        let cands = []; // per cell: candidate sample indices
+        let dust = [],
+            breathDust = [];
+        let particles = [];
         let t = 0,
             lastTs = 0,
             running = false,
-            coordTxt = "";
-
-        const R = (() => {
-            let s = 0x2f5d1a;
-            return () => {
-                s |= 0;
-                s = (s + 0x6d2b79f5) | 0;
-                let r = Math.imul(s ^ (s >>> 15), 1 | s);
-                r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
-                return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-            };
-        })();
-
-        const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-        const lerp = (a, b, k) => a + (b - a) * k;
+            spawnAcc = 0,
+            dt = 0.016;
 
         function palette() {
             const dark =
@@ -88,729 +89,88 @@
             ];
         }
 
-        const cellY = (y) => y * fsize + fsize * 0.5;
-        const cellX = (x) => x * pitch;
-
-        function cell(b, x, y, ch, ci, alpha) {
-            b.fillStyle = pal[ci];
-            if (alpha !== undefined) b.globalAlpha = alpha;
-            b.fillText(ch, cellX(x), cellY(y));
-            if (alpha !== undefined) b.globalAlpha = 1;
-        }
-
-        /* ------------------------------ composition ------------------------------ */
-
-        function drawDust(b, X, Y) {
-            S.dust = [];
-            const chars = [".", "·", ":", ";", "'", "`"];
-            for (let y = 1; y < rows - 1; y++) {
-                for (let x = 0; x < cols; x++) {
-                    if (R() < 0.021) {
-                        const ch = chars[(R() * chars.length) | 0];
-                        const ci = R() < 0.4 ? 0 : 1;
-                        cell(b, x, y, ch, ci, 0.5);
-                        S.dust.push({ x, y, ch, ci });
-                    }
-                }
-            }
-        }
-
-        function drawFloor(b, X, Y) {
-            const horizon = 0.74;
-            const hy = Y(horizon);
-            const vpx = X(0.5);
-            const taken = new Set();
-
-            // perspective rays converging at the vanishing point
-            const bottoms = [0.03, 0.1, 0.18, 0.28, 0.39, 0.47];
-            for (const lb of bottoms) {
-                for (const [bx, ch] of [
-                    [lb, "/"],
-                    [1 - lb, "\\"],
-                ]) {
-                    for (let y = Math.ceil(hy + 1); y < rows; y++) {
-                        const k = (y - hy) / (rows - hy);
-                        const x = Math.round(lerp(vpx, X(bx), k));
-                        if (x < 0 || x >= cols) continue;
-                        const key = y * cols + x;
-                        if (taken.has(key)) continue;
-                        taken.add(key);
-                        if ((y * 7 + x * 13) % 5 === 0) continue;
-                        cell(b, x, y, ch, 1);
-                    }
-                }
-            }
-
-            // topographic contour lines
-            const rowVs = [0.755, 0.775, 0.8, 0.83, 0.865, 0.905, 0.95];
-            S.contours = [];
-            rowVs.forEach((rv, k) => {
-                const baseY = Y(rv);
-                const amp = (rv - horizon) * 7.5;
-                const cells = [];
-                for (let x = 0; x < cols; x++) {
-                    const y = Math.round(
-                        baseY +
-                            Math.sin(x * 0.55 + k * 2.1) * 1.1 +
-                            Math.sin(x * 0.13 + k * 2.6) * amp,
-                    );
-                    if (y < hy || y >= rows) continue;
-                    const key = y * cols + x;
-                    if (taken.has(key)) continue;
-                    taken.add(key);
-                    let ch, ci;
-                    if (x % 11 === 5 && k > 0) {
-                        ch = "+";
-                        ci = k % 3 === 2 ? 4 : 2;
-                    } else if ((x + k) % 4 === 0 && R() < 0.1) {
-                        ch = "·";
-                        ci = 1;
-                    } else {
-                        ch = k % 2 === 0 ? "─" : "·";
-                        ci = k === 0 ? 2 : k % 3 === 0 ? 0 : 1;
-                    }
-                    cell(b, x, y, ch, ci);
-                    cells.push({ x, y, ch, ci });
-                }
-                S.contours.push({ cells, ci: k === 0 ? 2 : 1 });
-            });
-
-            // depth dots between contours
-            for (let y = Math.ceil(hy + 2); y < rows; y++) {
-                const v = y / rows;
-                const p = 0.05 + 0.14 * ((v - horizon) / (1 - horizon));
-                for (let x = 0; x < cols; x++) {
-                    if (taken.has(y * cols + x)) continue;
-                    if (R() < p) cell(b, x, y, ".", R() < 0.5 ? 1 : 0, 0.7);
-                }
-            }
-        }
-
-        function drawBeams(b, X, Y) {
-            const beams = [
-                { a: [X(0.46), Y(0.315)], b: [X(0.045), Y(0.87)], ch: "/" },
-                { a: [X(0.54), Y(0.315)], b: [X(0.955), Y(0.87)], ch: "\\" },
-                { a: [X(0.45), Y(0.25)], b: [X(0.1), Y(0.115)], ch: "\\" },
-                { a: [X(0.55), Y(0.25)], b: [X(0.9), Y(0.115)], ch: "/" },
-            ];
-            S.beams = [];
-            for (const bm of beams) {
-                const cells = [];
-                const dx = bm.b[0] - bm.a[0],
-                    dy = bm.b[1] - bm.a[1];
-                const len = Math.hypot(dx, dy);
-                const steps = Math.floor(len / (pitch * 0.55));
-                for (let i = 0; i <= steps; i++) {
-                    const x = Math.round(bm.a[0] + (dx * i) / steps);
-                    const y = Math.round(bm.a[1] + (dy * i) / steps);
-                    if (x < 0 || x >= cols || y < 0 || y >= rows) continue;
-                    if (cells.length && cells[cells.length - 1].x === x && cells[cells.length - 1].y === y) continue;
-                    cells.push({ x, y });
-                }
-                cells.forEach((c, i) => {
-                    cell(
-                        b,
-                        c.x,
-                        c.y,
-                        i % 2 === 0 ? bm.ch : "·",
-                        i % 12 === 5 ? 4 : i % 2 === 0 ? 1 : 0,
-                    );
-                });
-                S.beams.push({ cells, ch: bm.ch });
-            }
-        }
-
-        function drawSpine(b, X, Y) {
-            S.spine = [];
-            const x = Math.round(X(0.5));
-            const y0 = Math.round(Y(0.345)),
-                y1 = Math.round(Y(0.49));
-            for (let y = y0; y <= y1; y++) {
-                cell(b, x, y, "│", y % 4 === 0 ? 4 : 2);
-                S.spine.push({ x, y });
-            }
-        }
-
-        function drawObelisk(b, X, Y) {
-            const ox = Math.round(X(0.5));
-            const hw = Math.max(3, Math.round(0.07 * cols));
-            S.segA = [];
-            S.window = [];
-            const dense = (density, chars, ciA, ciB) => {
-                const cells = [];
-                for (let y = y0; y <= y1; y++)
-                    for (let x = ox - hw + 1; x <= ox + hw - 1; x++) {
-                        if (R() >= density) continue;
-                        const ch = chars[(R() * chars.length) | 0];
-                        const ci = R() < ciB ? ciA : 2;
-                        cell(b, x, y, ch, ci);
-                        cells.push({ x, y });
-                    }
-                return cells;
+        const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+        const hash = (x, y) => {
+            const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+            return s - Math.floor(s);
+        };
+        const R = (() => {
+            let s = 0x9e3779b9;
+            return () => {
+                s |= 0;
+                s = (s + 0x6d2b79f5) | 0;
+                let r = Math.imul(s ^ (s >>> 15), 1 | s);
+                r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+                return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
             };
+        })();
 
-            // tip beacon
-            const tipY = Math.round(Y(0.486));
-            S.tip = { x: ox, y: tipY };
-            cell(b, ox, tipY, "▲", 5);
-
-            // cap
-            const capY = Math.round(Y(0.503));
-            for (let x = ox - hw; x <= ox + hw; x++) {
-                if (x === ox - hw) cell(b, x, capY, "╭", 2);
-                else if (x === ox + hw) cell(b, x, capY, "╮", 2);
-                else cell(b, x, capY, "─", 0);
-            }
-
-            // segment A — processor stack
-            let y0 = Math.round(Y(0.515)),
-                y1 = Math.round(Y(0.572));
-            for (let y = y0; y <= y1; y++) {
-                cell(b, ox - hw, y, "║", 2);
-                cell(b, ox + hw, y, "║", 2);
-            }
-            S.segA = dense(0.66, ["#", "@", "%", "&", "▓", "▒", "░"], 3, 0.22);
-
-            // fin
-            const finY = Math.round(Y(0.584));
-            for (let x = ox - hw - 1; x <= ox + hw + 1; x++) {
-                if (x === ox - hw - 1 || x === ox + hw + 1) cell(b, x, finY, "╪", 2);
-                else cell(b, x, finY, "═", 1);
-            }
-
-            // window — live data stream (teal-tinted)
-            y0 = Math.round(Y(0.598));
-            y1 = Math.round(Y(0.646));
-            let r = 0;
-            for (let y = y0; y <= y1; y++) {
-                cell(b, ox - hw, y, "▌", 1);
-                cell(b, ox + hw, y, "▐", 1);
-                for (let x = ox - hw + 1; x <= ox + hw - 1; x++) {
-                    const ci = r % 2 === 0 ? 0 : 4;
-                    cell(b, x, y, "·", ci);
-                    S.window.push({ x, y, r, ci });
-                }
-                r++;
-            }
-            // window dividers
-            const divY1 = Math.round(Y(0.588));
-            cell(b, ox - hw, divY1, "╞", 1);
-            cell(b, ox + hw, divY1, "╡", 1);
-            const divY2 = Math.round(Y(0.658));
-            cell(b, ox - hw, divY2, "╞", 1);
-            cell(b, ox + hw, divY2, "╡", 1);
-
-            // segment C — heavy base
-            y0 = Math.round(Y(0.67));
-            y1 = Math.round(Y(0.716));
-            for (let y = y0; y <= y1; y++) {
-                cell(b, ox - hw, y, "║", 2);
-                cell(b, ox + hw, y, "║", 2);
-            }
-            dense(0.72, ["#", "@", "%", "&", "▓"], 3, 0.15);
-
-            // lower fin
-            const finY2 = Math.round(Y(0.728));
-            for (let x = ox - hw - 1; x <= ox + hw + 1; x++) {
-                if (x === ox - hw - 1 || x === ox + hw + 1) cell(b, x, finY2, "╪", 2);
-                else cell(b, x, finY2, "═", 1);
-            }
-
-            // flared base
-            const baseY = Math.round(Y(0.742));
-            for (let x = ox - hw - 2; x <= ox + hw + 2; x++) {
-                if (x === ox - hw - 2) cell(b, x, baseY, "╚", 2);
-                else if (x === ox + hw + 2) cell(b, x, baseY, "╝", 2);
-                else cell(b, x, baseY, "═", 1);
-            }
-
-            // ground strip
-            const gY = Math.round(Y(0.752));
-            for (let x = ox - hw - 4; x <= ox + hw + 4; x++) cell(b, x, gY, "▄", 3);
-        }
-
-        function drawCore(b, X, Y) {
-            const cx = Math.round(X(0.5)),
-                cy = Math.round(Y(0.275));
-            const rx = 0.17 * cols,
-                ry = 0.085 * rows;
-            const cfgs = [
-                { r: 1, kind: 1, lap: 19, dir: 1 },
-                { r: 0.78, kind: 2, lap: 12, dir: -1 },
-                { r: 0.56, kind: 3, lap: 7, dir: 1 },
-            ];
-            S.rings = [];
-            for (const cfg of cfgs) {
-                const pts = [];
-                const seen = new Set();
-                for (let a = 0; a < Math.PI * 2; a += 0.03) {
-                    const px = Math.round(cx + rx * cfg.r * Math.cos(a));
-                    const py = Math.round(cy + ry * cfg.r * Math.sin(a));
-                    const key = py * cols + px;
-                    if (seen.has(key)) continue;
-                    seen.add(key);
-                    // tangent direction decides the glyph (what the ring *looks* like)
-                    const tx = rx * cfg.r * Math.sin(a) * 0.6;
-                    const ty = ry * cfg.r * Math.cos(a);
-                    let ch, ci = 2;
-                    if (cfg.kind === 1) {
-                        ch =
-                            Math.abs(ty) > Math.abs(tx) * 1.6
-                                ? "│"
-                                : Math.abs(tx) > Math.abs(ty) * 1.6
-                                  ? "─"
-                                  : tx * ty > 0
-                                    ? "/"
-                                    : "\\";
-                        ci = 2;
-                    } else if (cfg.kind === 2) {
-                        if (pts.length % 3 === 2) continue;
-                        ch = Math.abs(tx) > Math.abs(ty) * 1.6 ? "─" : "·";
-                        ci = 1;
-                    } else {
-                        if (pts.length % 2 === 1) continue;
-                        ch = "*";
-                        ci = 3;
-                    }
-                    if (cfg.kind === 1 && R() < 0.06) ci = 4;
-                    cell(b, px, py, ch, ci);
-                    pts.push({ x: px, y: py, ch, ci });
-                }
-                S.rings.push({ pts, lap: cfg.lap, dir: cfg.dir });
-            }
-
-            // shaded interior
-            const R2 = 0.62;
-            for (let y = Math.round(cy - ry); y <= Math.round(cy + ry); y++)
-                for (let x = Math.round(cx - rx); x <= Math.round(cx + rx); x++) {
-                    const d =
-                        ((x - cx) / rx) * ((x - cx) / rx) +
-                        ((y - cy) / ry) * ((y - cy) / ry);
-                    if (d >= R2 * R2) continue;
-                    const shade = clamp(
-                        0.5 +
-                            0.5 * (0.42 - (y - cy) / (ry * 2) + 0.16 * ((x - cx) / rx)),
-                        0,
-                        1,
-                    );
-                    if (R() >= 0.6) continue;
-                    const set =
-                        shade > 0.62
-                            ? ["·", "+", "░"]
-                            : shade > 0.35
-                              ? ["▒", "*", "#"]
-                              : ["▓", "@", "%", "&"];
-                    const ch = set[(R() * set.length) | 0];
-                    const ci = R() < 0.13 ? 4 : shade > 0.55 ? 2 : 3;
-                    cell(b, x, y, ch, ci);
-                }
-            // bright center
-            S.coreCenter = { x: cx, y: cy };
-            cell(b, cx, cy, "#", 5);
-        }
-
-        function drawHalos(b, X, Y) {
-            S.halos = [];
-            const mk = (uc, vc, ru, rv, a0, a1, dashSkip, ci, chBase, nodeEvery) => {
-                const pts = [];
-                const seen = new Set();
-                let i = 0;
-                for (let a = a0; a < a1; a += 0.022) {
-                    const px = Math.round(X(uc) + ru * cols * Math.cos(a));
-                    const py = Math.round(Y(vc) + rv * rows * Math.sin(a));
-                    const key = py * cols + px;
-                    if (seen.has(key)) continue;
-                    seen.add(key);
-                    if (i % dashSkip === 0) {
-                        i++;
-                        continue;
-                    }
-                    const ch = i % nodeEvery === 0 ? "+" : chBase;
-                    const ciN = i % nodeEvery === 0 ? 4 : ci;
-                    cell(b, px, py, ch, ciN);
-                    pts.push({ x: px, y: py, ch, ci: ciN });
-                    i++;
-                }
-                return pts;
-            };
-            // upper orbit ring (full ellipse)
-            S.halos.push({
-                pts: mk(0.5, 0.08, 0.37, 0.05, 0, Math.PI * 2, 3, 1, "·", 16),
-                spd: 2.2,
-                hic: 4,
-                riders: true,
-            });
-            // canopy over the core (upper arc, ∩-shaped)
-            S.halos.push({
-                pts: mk(0.5, 0.24, 0.36, 0.08, Math.PI * 1.18, Math.PI * 1.82, 3, 0, "─", 18),
-                spd: 1.2,
-                hic: -1,
-                riders: false,
-            });
-            // arch over the machine (upper arc, ∩-shaped)
-            S.halos.push({
-                pts: mk(0.5, 0.52, 0.4, 0.07, Math.PI * 1.18, Math.PI * 1.82, 4, 0, "─", 14),
-                spd: 1.6,
-                hic: 5,
-                riders: true,
-            });
-            // horizontal data line
-            S.halos.push({
-                pts: mk(0.5, 0.39, 0.38, 0.006, 0, Math.PI, 2, 1, "·", 12),
-                spd: 3.4,
-                hic: 4,
-                riders: false,
-            });
-        }
-
-        function drawClusters(b, X, Y) {
-            // small fixed detail clusters in the sparse bands
-            S.clusters = [
-                { u: 0.26, v: 0.205, ph: 0.6 },
-                { u: 0.74, v: 0.19, ph: 2.2 },
-                { u: 0.18, v: 0.435, ph: 3.9 },
-                { u: 0.82, v: 0.41, ph: 5.1 },
-            ].map((c) => {
-                const cx = Math.round(X(c.u));
-                const cy = Math.round(Y(c.v));
-                cell(b, cx, cy, "*", 2);
-                cell(b, cx - 1, cy - 1, "+", 1);
-                cell(b, cx + 1, cy - 1, "+", 1);
-                cell(b, cx - 1, cy + 1, "+", 1);
-                cell(b, cx + 1, cy + 1, "+", 1);
-                cell(b, cx, cy - 2, ".", 0);
-                cell(b, cx, cy + 2, ".", 0);
-                cell(b, cx - 2, cy, ".", 0);
-                cell(b, cx + 2, cy, ".", 0);
-                return { cx, cy, ph: c.ph };
-            });
-        }
-
-        function drawLabels(b) {
-            const pad = Math.max(6, fsize * 0.55);
-            // top-left
-            cell(b, 1, 1, "▪", 5, 0.9);
-            b.fillStyle = pal[1];
-            b.fillText("GEN/01", cellX(3), cellY(1));
-            // top-right
-            b.textAlign = "right";
-            b.fillStyle = pal[1];
-            b.fillText("REC 8.4Hz", W - pad, cellY(1));
-            b.textAlign = "left";
-            // bottom-left
-            cell(b, 1, rows - 2, "▪", 5, 0.9);
-            b.fillStyle = pal[1];
-            b.fillText("FIELD·ACTIVE", cellX(3), cellY(rows - 2));
-            S.labels = { pad };
-        }
-
-        function build() {
-            bctx.textBaseline = "middle";
-            bctx.textAlign = "left";
-            bctx.clearRect(0, 0, W, H);
-            S = {};
-            const X = (u) => u * cols,
-                Y = (v) => v * rows;
-            drawDust(bctx, X, Y);
-            drawFloor(bctx, X, Y);
-            drawBeams(bctx, X, Y);
-            drawSpine(bctx, X, Y);
-            drawObelisk(bctx, X, Y);
-            drawCore(bctx, X, Y);
-            drawHalos(bctx, X, Y);
-            drawClusters(bctx, X, Y);
-            drawLabels(bctx);
-            // breathing dust subset
-            breathing = [];
-            for (let i = 0; i < 38 && i < S.dust.length; i++) {
-                const d = S.dust[(R() * S.dust.length) | 0];
-                if (d) breathing.push({ x: d.x, y: d.y, ci: d.ci, ph: R() * 6.28 });
-            }
-        }
-
-        /* ------------------------------- animation ------------------------------- */
-
-        function overlay() {
-            // rotating rings
-            for (const ring of S.rings) {
-                const n = ring.pts.length;
-                if (!n) continue;
-                const shift = Math.floor((t / ring.lap) * n * ring.dir) % n;
-                const off = ((shift % n) + n) % n;
-                for (let i = 0; i < n; i++) {
-                    const src = ring.pts[(i + off) % n];
-                    const dst = ring.pts[i];
-                    if (src.ch === dst.ch && src.ci === dst.ci) continue;
-                    ctx.fillStyle = pal[src.ci];
-                    ctx.fillText(src.ch, cellX(dst.x), cellY(dst.y));
-                }
-            }
-
-            // satellites on outer ring
-            const r1 = S.rings[0].pts,
-                n1 = r1.length;
-            if (n1) {
-                const a = Math.floor(t * 0.55) % n1;
-                const b = (a + (n1 >> 1)) % n1;
-                ctx.fillStyle = pal[5];
-                ctx.fillText("[", cellX(r1[a].x), cellY(r1[a].y));
-                ctx.fillText("]", cellX(r1[b].x), cellY(r1[b].y));
-                ctx.fillStyle = pal[1];
-                ctx.globalAlpha = 0.5;
-                ctx.fillText("·", cellX(r1[(a - 1 + n1) % n1].x), cellY(r1[(a - 1 + n1) % n1].y));
-                ctx.fillText("·", cellX(r1[(a - 2 + n1) % n1].x), cellY(r1[(a - 2 + n1) % n1].y));
-                ctx.globalAlpha = 1;
-            }
-
-            // halo dash rotation + riders
-            for (let h = 0; h < S.halos.length; h++) {
-                const halo = S.halos[h],
-                    n = halo.pts.length;
-                if (!n) continue;
-                const sh = Math.floor(t * halo.spd) % n;
-                for (let i = 0; i < n; i += 2) {
-                    if (halo.hic < 0) break;
-                    if ((i + sh) % 5 !== 0) continue;
-                    const p = halo.pts[i];
-                    ctx.fillStyle = pal[halo.hic];
-                    ctx.fillText(p.ch, cellX(p.x), cellY(p.y));
-                }
-                if (halo.riders) {
-                    const r = Math.floor(t * (h === 0 ? 0.28 : 0.14)) % n;
-                    ctx.fillStyle = pal[5];
-                    ctx.fillText("[", cellX(halo.pts[r].x), cellY(halo.pts[r].y));
-                    ctx.fillText("]", cellX(halo.pts[(r + (n >> 1)) % n].x), cellY(halo.pts[(r + (n >> 1)) % n].y));
-                }
-            }
-
-            // detail clusters breathing
-            for (const c of S.clusters) {
-                const a = 0.45 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.9 + c.ph));
-                ctx.globalAlpha = a;
-                ctx.fillStyle = pal[1];
-                ctx.fillText("+", cellX(c.cx - 1), cellY(c.cy - 1));
-                ctx.fillText("+", cellX(c.cx + 1), cellY(c.cy - 1));
-                ctx.fillText("+", cellX(c.cx - 1), cellY(c.cy + 1));
-                ctx.fillText("+", cellX(c.cx + 1), cellY(c.cy + 1));
-                ctx.fillStyle = pal[0];
-                ctx.fillText(".", cellX(c.cx), cellY(c.cy - 2));
-                ctx.fillText(".", cellX(c.cx), cellY(c.cy + 2));
-                ctx.fillText(".", cellX(c.cx - 2), cellY(c.cy));
-                ctx.fillText(".", cellX(c.cx + 2), cellY(c.cy));
-            }
-            ctx.globalAlpha = 1;
-
-            // data flowing along beams
-            const kk = Math.floor(t * 9);
-            for (const bm of S.beams) {
-                for (let i = 0; i < bm.cells.length; i++) {
-                    const j = i - kk;
-                    if (j % 6 === 0) {
-                        const c = bm.cells[i];
-                        ctx.fillStyle = pal[5];
-                        ctx.fillText("·", cellX(c.x), cellY(c.y));
-                    } else if (j % 6 === 3) {
-                        const c = bm.cells[i];
-                        ctx.fillStyle = pal[4];
-                        ctx.fillText(bm.ch, cellX(c.x), cellY(c.y));
-                    }
-                }
-            }
-
-            // spine flow
-            const k2 = Math.floor(t * 8);
-            for (let i = 0; i < S.spine.length; i++) {
-                const j = i - k2;
-                const c = S.spine[i];
-                if (j % 5 === 0) {
-                    ctx.fillStyle = pal[1];
-                    ctx.fillText("·", cellX(c.x), cellY(c.y));
-                } else if (j % 5 === 4) {
-                    ctx.fillStyle = pal[4];
-                    ctx.fillText("│", cellX(c.x), cellY(c.y));
-                }
-            }
-
-            // obelisk window stream (teal data flow)
-            const seq = "|·:·°·";
-            const k3 = Math.floor(t * 10);
-            for (const c of S.window) {
-                const idx = (c.r * 2 - k3) & 7;
-                const ch = seq[idx % 6];
-                ctx.fillStyle = ch === "°" ? pal[5] : ch === ":" ? pal[1] : pal[4];
-                ctx.fillText(ch, cellX(c.x), cellY(c.y));
-            }
-
-            // core center pulse
-            if (S.coreCenter) {
-                ctx.fillStyle = pal[5];
-                ctx.globalAlpha = 0.85 + 0.15 * Math.sin(t * 3.1);
-                ctx.fillText(
-                    "#@%#█"[Math.floor(t * 1.4) % 4],
-                    cellX(S.coreCenter.x),
-                    cellY(S.coreCenter.y),
+        function buildCurve() {
+            curve = [];
+            const n = CP.length;
+            const N = 190;
+            for (let i = 0; i < N; i++) {
+                const tt = (i / (N - 1)) * (n - 1);
+                const i0 = Math.floor(tt);
+                const f = tt - i0;
+                const p0 = CP[Math.max(0, i0 - 1)],
+                    p1 = CP[i0],
+                    p2 = CP[Math.min(n - 1, i0 + 1)],
+                    p3 = CP[Math.min(n - 1, i0 + 2)];
+                const u =
+                    0.5 *
+                    (2 * p1[0] +
+                        (-p0[0] + p2[0]) * f +
+                        (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * f * f +
+                        (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * f * f * f);
+                const v =
+                    0.5 *
+                    (2 * p1[1] +
+                        (-p0[1] + p2[1]) * f +
+                        (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * f * f +
+                        (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * f * f * f);
+                const tn = i / (N - 1);
+                const taper = Math.pow(
+                    Math.sin(
+                        Math.PI * clamp((tn - 0.05) / 0.9, 0, 1),
+                    ),
+                    1.15,
                 );
-                ctx.globalAlpha = 1;
+                const w =
+                    WMAX *
+                    (0.32 + 0.68 * taper) *
+                    (0.93 + 0.07 * Math.sin(tn * 22 + 1.7));
+                curve.push({ u, v, t: tn, w, front: tn >= FRONT_T });
             }
-
-            // tip beacon pulse
-            if (S.tip) {
-                ctx.globalAlpha = 0.7 + 0.3 * Math.sin(t * 2.2);
-                ctx.fillStyle = pal[5];
-                ctx.fillText("▲", cellX(S.tip.x), cellY(S.tip.y));
-                ctx.globalAlpha = 1;
-            }
-
-            // periodic glow sweeping the outer ring
-            const fp = (t % 4.5) / 4.5;
-            if (fp < 0.3) {
-                ctx.globalAlpha = (1 - fp / 0.3) * 0.38;
-                ctx.fillStyle = pal[5];
-                for (const p of r1) ctx.fillText(p.ch, cellX(p.x), cellY(p.y));
-                ctx.globalAlpha = 1;
-            }
-
-            // wave sweeping through the floor contours
-            for (let k = 0; k < S.contours.length; k++) {
-                const f = (t * 0.14 + k * 0.062) % 1;
-                const bw = Math.max(0, 1 - Math.abs(f - 0.5) * 6);
-                if (bw <= 0.04) continue;
-                ctx.globalAlpha = Math.min(1, bw) * 0.85;
-                ctx.fillStyle = bw > 0.7 ? pal[5] : pal[4];
-                const cs = S.contours[k].cells;
-                for (let i = 0; i < cs.length; i += 2) {
-                    const c = cs[i];
-                    ctx.fillText(c.ch, cellX(c.x), cellY(c.y));
-                }
-                if (bw > 0.5) {
-                    ctx.fillStyle = pal[5];
-                    for (let s2 = 0; s2 < 5; s2++) {
-                        const c = cs[(R() * cs.length) | 0];
-                        if (!c) continue;
-                        ctx.fillText("│", cellX(c.x), cellY(c.y - 1));
-                    }
-                }
-            }
-            ctx.globalAlpha = 1;
-
-            // breathing dust
-            for (const d of breathing) {
-                ctx.globalAlpha = 0.2 + 0.38 * (0.5 + 0.5 * Math.sin(t * 0.55 + d.ph));
-                ctx.fillStyle = pal[d.ci];
-                ctx.fillText("·", cellX(d.x), cellY(d.y));
-            }
-            ctx.globalAlpha = 1;
-
-            // rising particles
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.life -= 1 / 60;
-                p.y -= p.spd / 60;
-                p.x += Math.sin(t * p.fr + p.ph) * 0.05 * (1 / 60);
-                if (p.life <= 0 || p.y < 0.05) particles.splice(i, 1);
-            }
-            while (particles.length < 12) {
-                particles.push({
-                    x: 0.06 + R() * 0.88,
-                    y: 0.72 + R() * 0.16,
-                    spd: 0.02 + R() * 0.03,
-                    fr: 0.4 + R() * 1.2,
-                    ph: R() * 6.28,
-                    life: 7 + R() * 8,
-                    max: 0,
-                    green: R() < 0.42,
-                });
-                const p = particles[particles.length - 1];
-                p.max = p.life;
-            }
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
-                ctx.globalAlpha = 0.25 + 0.6 * Math.sin(Math.PI * (1 - p.life / p.max));
-                ctx.fillStyle = p.green ? pal[5] : pal[1];
-                ctx.fillText(
-                    "·+*·"[((Math.floor(t * 1.6) + i) & 3)],
-                    cellX(p.x * cols),
-                    cellY(p.y * rows),
-                );
-            }
-
-            // embers rising off the machine
-            for (let i = 0; i < embers.length; i++) {
-                const e = embers[i];
-                const prog = (t * e.spd + e.ph) % 1;
-                const y = 0.76 - prog * 0.42;
-                const x = e.x + Math.sin(t * 1.1 + e.ph) * 1.6;
-                ctx.globalAlpha = (1 - prog) * 0.75;
-                ctx.fillStyle = e.green ? pal[5] : pal[4];
-                ctx.fillText("°", cellX(x), cellY(y * rows));
-            }
-            ctx.globalAlpha = 1;
-
-            // glitch bands
-            if (!glitch.active && t > glitch.next) {
-                glitch.active = true;
-                glitch.r0 = Math.round(Y(0.34 + R() * 0.36));
-                glitch.h = 2 + ((R() * 3) | 0);
-                glitch.until = t + 0.16 + R() * 0.24;
-                glitch.next = t + 4 + R() * 6;
-            }
-            if (glitch.active) {
-                const glyphs = ["#", "@", "%", "&", "/", "\\", "|", "<", ">", "[", "]", "{", "}", "*", "+", "=", "~", "^"];
-                for (let y = glitch.r0; y < glitch.r0 + glitch.h; y++) {
-                    if (y < 0 || y >= rows) continue;
-                    for (let x = 0; x < cols; x++) {
-                        if (R() >= 0.5) continue;
-                        const dx = R() < 0.16 ? (R() < 0.5 ? -1 : 1) : 0;
-                        const ch = glyphs[(R() * glyphs.length) | 0];
-                        ctx.fillStyle = pal[R() < 0.12 ? 5 : R() < 0.5 ? 3 : 2];
-                        ctx.fillText(ch, cellX(x + dx), cellY(y));
-                    }
-                }
-                if (t > glitch.until) glitch.active = false;
-            }
-
-            // morph pulse through the processor stack
-            if (!morph.active && t > morph.next) {
-                morph.active = true;
-                morph.cells = [];
-                for (let i = 0; i < 90 && S.segA.length; i++)
-                    morph.cells.push(S.segA[(R() * S.segA.length) | 0]);
-                morph.until = t + 0.35;
-                morph.next = t + 5 + R() * 4;
-            }
-            if (morph.active) {
-                const glyphs = ["#", "@", "%", "&", "▓", "▒"];
-                for (const c of morph.cells) {
-                    ctx.fillStyle = pal[R() < 0.3 ? 5 : 3];
-                    ctx.fillText(glyphs[(R() * glyphs.length) | 0], cellX(c.x), cellY(c.y));
-                }
-                if (t > morph.until) morph.active = false;
-            }
-
-            // live coordinates
-            const xv = 41.7 + Math.sin(t * 0.21) * 9.2;
-            const yv = 62.3 + Math.cos(t * 0.13) * 11.4;
-            const txt = `X:${xv.toFixed(1)} Y:${yv.toFixed(1)}`;
-            if (txt !== coordTxt) {
-                coordTxt = txt;
-                ctx.textAlign = "right";
-                ctx.fillStyle = pal[1];
-                ctx.fillText(txt, W - S.labels.pad, cellY(rows - 2));
-                ctx.textAlign = "left";
+            // tangents for particle direction
+            for (let i = 0; i < curve.length; i++) {
+                const a = curve[Math.max(0, i - 1)];
+                const b = curve[Math.min(curve.length - 1, i + 1)];
+                const dx = b.u - a.u,
+                    dy = b.v - a.v;
+                const len = Math.hypot(dx, dy) || 1;
+                curve[i].tx = dx / len;
+                curve[i].ty = dy / len;
             }
         }
 
-        function frame(ts) {
-            const dt = Math.max(0, Math.min(0.05, (ts - lastTs) / 1000 || 0.016));
-            lastTs = ts;
-            t += dt;
-            try {
-                ctx.drawImage(base, 0, 0, W, H);
-                overlay();
-            } catch (e) {
-                console.error("ASCIIDIAG", e.message, "rings:", (S && S.rings && S.rings.length) || 0, "n1:", S && S.rings && S.rings[0] ? S.rings[0].pts.length : "?", "t:", t, e.stack && e.stack.split("\n").slice(0, 3).join(" | "));
+        function buildDust() {
+            dust = [];
+            for (let y = 0; y < rows; y++)
+                for (let x = 0; x < cols; x++) {
+                    if (hash(x, y) > 0.009) continue;
+                    const ch = ".·:;"[(hash(x + 3.7, y + 9.2) * 4) | 0];
+                    const ci = hash(x, y + 1.3) < 0.4 ? 0 : 1;
+                    bctx.fillStyle = pal[ci];
+                    bctx.globalAlpha = 0.45;
+                    bctx.fillText(ch, x * pitch + pitch / 2, y * fsize + fsize * 0.5);
+                }
+            bctx.globalAlpha = 1;
+            breathDust = [];
+            for (let i = 0; i < 20 && dust.length; i++) {
+                const d = dust[(R() * dust.length) | 0];
+                if (d) breathDust.push({ x: d.x, y: d.y, ph: R() * 6.28 });
             }
-            requestAnimationFrame(frame);
         }
 
         function resize() {
@@ -818,14 +178,14 @@
             H = wrap.clientHeight;
             if (W < 40 || H < 40) return;
             dpr = Math.min(2, window.devicePixelRatio || 1);
-            fsize = clamp(W / 44, 9.5, 12.5);
+            fsize = clamp(W / 40, 10, 13.5);
             ctx.font = `${fsize}px ${FONT}`;
             try {
                 ctx.letterSpacing = "0px";
             } catch {}
             pitch = ctx.measureText("0").width || fsize * 0.6;
-            cols = Math.max(16, Math.floor(W / pitch));
-            rows = Math.max(16, Math.floor(H / fsize));
+            cols = Math.max(20, Math.floor(W / pitch));
+            rows = Math.max(20, Math.floor(H / fsize));
             canvas.width = W * dpr;
             canvas.height = H * dpr;
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -838,8 +198,31 @@
             bctx.font = ctx.font;
             bctx.textBaseline = "middle";
             pal = palette();
-            build();
+
+            buildCurve();
+            buildDust();
+
+            // candidate samples per cell (windowed by distance)
+            const maxR = WMAX * 1.3 * cols + 0.03 * cols + 2;
+            cands = [];
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const list = [];
+                    for (let si = 0; si < curve.length; si++) {
+                        const s = curve[si];
+                        if (
+                            Math.abs(x - s.u * cols) > maxR ||
+                            Math.abs(y - s.v * rows) > maxR
+                        )
+                            continue;
+                        list.push(si);
+                    }
+                    cands.push(list);
+                }
+            }
+
             ctx.drawImage(base, 0, 0, W, H);
+            drawFrame();
             if (!reduced && !running) {
                 running = true;
                 lastTs = performance.now();
@@ -847,14 +230,190 @@
             }
         }
 
-        // embers near the machine base
-        for (let i = 0; i < 6; i++) {
-            embers.push({
-                x: 0.5 + (R() - 0.5) * 0.22,
-                spd: 0.035 + R() * 0.05,
-                ph: R() * 6.28,
-                green: R() < 0.5,
-            });
+        /* ------------------------------- rendering ------------------------------ */
+
+        const TIERS = [
+            { r: 0.16, p: 0.85, ch: ["#", "@", "%", "&"], ci: [3, 3, 2, 4], a: 1 },
+            { r: 0.42, p: 0.6, ch: ["*", "+", ":", "·"], ci: [2, 2, 1, 1], a: 0.95 },
+            { r: 0.72, p: 0.32, ch: ["·", ".", ":"], ci: [1, 0, 0], a: 0.85 },
+            { r: 1.0, p: 0.13, ch: ["░", "·", "."], ci: [0, 0, 0], a: 0.7 },
+            { r: 1.22, p: 0.06, ch: ["·", "."], ci: [0], a: 0.5 },
+        ];
+
+        function drawFrame() {
+            // ripple displacement + breathing width, per sample
+            const n = curve.length;
+            const su = new Float32Array(n);
+            const sw = new Float32Array(n);
+            for (let i = 0; i < n; i++) {
+                const s = curve[i];
+                su[i] = s.u + 0.02 * Math.sin(s.t * 9.5 - t * 0.9);
+                sw[i] = s.w * (1 + 0.13 * Math.sin(t * 0.55 + s.t * 4.2)) * cols;
+            }
+
+            ctx.drawImage(base, 0, 0, W, H);
+            const fsize2 = fsize * 0.5;
+
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const list = cands[y * cols + x];
+                    if (!list || !list.length) continue;
+                    let dF = Infinity,
+                        dFw = 0,
+                        dB = Infinity,
+                        dBw = 0;
+                    for (let k = 0; k < list.length; k++) {
+                        const s = curve[list[k]];
+                        const dx = x - su[list[k]] * cols;
+                        const dy = y - s.v * rows;
+                        const d2 = dx * dx + dy * dy;
+                        if (s.front) {
+                            if (d2 < dF) {
+                                dF = d2;
+                                dFw = sw[list[k]];
+                            }
+                        } else if (d2 < dB) {
+                            dB = d2;
+                            dBw = sw[list[k]];
+                        }
+                    }
+                    const frontHere = dF <= dB;
+                    const d = Math.min(dF, dB);
+                    const wEff = frontHere ? dFw : dBw;
+                    if (d === Infinity || !wEff) continue;
+                    const r = Math.sqrt(d) / wEff;
+                    if (r >= 1.22) continue;
+
+                    let alpha = 1;
+                    if (!frontHere && dF < 2.4 * wEff * 2.4 * wEff)
+                        alpha = 0.38; // behind the front layer
+
+                    // tier from distance
+                    let tier = TIERS.length - 1;
+                    for (let ti = 0; ti < TIERS.length; ti++) {
+                        if (r < TIERS[ti].r) {
+                            tier = ti;
+                            break;
+                        }
+                    }
+                    const T = TIERS[tier];
+                    const h1 = hash(x, y);
+                    const h2 = hash(x + 7.31, y + 13.7);
+
+                    let p = T.p;
+                    if (tier === 4) {
+                        // edge haze slowly appears / dissolves
+                        p *= 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.9 + h1 * 6.28));
+                    }
+                    if (h2 > p) continue;
+
+                    let idx = (h1 * T.ch.length) | 0;
+                    // gentle shimmer: a few cells re-roll continuously
+                    if ((x * 7 + y * 13 + Math.floor(t * 1.4)) % 41 === 0)
+                        idx = (idx + 1) % T.ch.length;
+
+                    ctx.globalAlpha = T.a * alpha;
+                    ctx.fillStyle = pal[T.ci[idx]];
+                    ctx.fillText(T.ch[idx], x * pitch + pitch / 2, y * fsize + fsize2);
+                }
+            }
+            ctx.globalAlpha = 1;
+
+            // energy thread flowing along the ribbon
+            for (let i = 0; i < 20; i++) {
+                const tn = (i / 20 + t * 0.018) % 1;
+                const s = curve[Math.min(n - 1, Math.round(tn * (n - 1)))];
+                const off = ((hash(i * 3.1, 1.7) * 2 - 1) * 0.35 * cols * WMAX) / 1;
+                const x = s.u * cols + off * s.tx;
+                const y = s.v * rows + off * s.ty;
+                const ch = "+·*"[i % 3];
+                ctx.globalAlpha = 0.55 + 0.3 * Math.sin(t * 1.6 + i * 1.9);
+                ctx.fillStyle = pal[i % 2 ? 5 : 4];
+                ctx.fillText(ch, x * pitch + pitch / 2, y * fsize + fsize2);
+            }
+            ctx.globalAlpha = 1;
+
+            // small blooms where the light catches the fold
+            const BT = [0.16, 0.47, 0.82];
+            for (let i = 0; i < BT.length; i++) {
+                const s = curve[Math.min(n - 1, Math.round(BT[i] * (n - 1)))];
+                const cx = s.u * cols,
+                    cy = s.v * rows;
+                const pulse = 0.55 + 0.45 * Math.sin(t * 0.8 + i * 2.1);
+                ctx.globalAlpha = 0.9 * pulse;
+                ctx.fillStyle = pal[5];
+                ctx.fillText("*", cx * pitch + pitch / 2, cy * fsize + fsize2);
+                ctx.globalAlpha = 0.5 * pulse;
+                ctx.fillStyle = pal[4];
+                ctx.fillText("+", (cx - 1) * pitch + pitch / 2, cy * fsize + fsize2);
+                ctx.fillText("+", (cx + 1) * pitch + pitch / 2, cy * fsize + fsize2);
+                ctx.fillText("·", cx * pitch + pitch / 2, (cy - 1) * fsize + fsize2);
+                ctx.fillText("·", cx * pitch + pitch / 2, (cy + 1) * fsize + fsize2);
+            }
+            ctx.globalAlpha = 1;
+
+            // breathing dust in the empty space
+            for (const d of breathDust) {
+                ctx.globalAlpha =
+                    0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 0.5 + d.ph));
+                ctx.fillStyle = pal[0];
+                ctx.fillText("·", d.x * pitch + pitch / 2, d.y * fsize + fsize2);
+            }
+            ctx.globalAlpha = 1;
+
+            // particles escaping the form
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.age += dt;
+                p.off += p.speed * dt;
+                p.vy += p.vdrift * dt;
+                if (p.age > p.life) particles.splice(i, 1);
+            }
+            spawnAcc += dt;
+            if (spawnAcc > 1.5 && particles.length < 10) {
+                const tn = R();
+                const s = curve[Math.min(n - 1, Math.round(tn * (n - 1)))];
+                const side = R() < 0.5 ? -1 : 1;
+                particles.push({
+                    tn,
+                    side,
+                    off: (1.15 + R() * 0.8) * s.w * cols,
+                    vy: 0.25 + R() * 0.3,
+                    speed: 0.12 + R() * 0.22,
+                    age: 0,
+                    life: 8 + R() * 7,
+                    green: R() < 0.35,
+                });
+                spawnAcc = 0;
+            }
+            for (const p of particles) {
+                const s = curve[Math.min(n - 1, Math.round(p.tn * (n - 1)))];
+                const px = s.u * cols + s.tx * p.off * p.side;
+                const py = s.v * rows + s.ty * p.off * p.side - p.vy * p.age;
+                const a = Math.sin(Math.PI * Math.min(1, p.age / p.life));
+                if (px < -1 || px > cols + 1 || py < -1 || py > rows + 1) continue;
+                ctx.globalAlpha = 0.75 * a;
+                ctx.fillStyle = p.green ? pal[5] : pal[1];
+                ctx.fillText(
+                    "·+*"[((p.age * 1.2 + p.tn * 7) | 0) % 3],
+                    px * pitch + pitch / 2,
+                    py * fsize + fsize2,
+                );
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function frame(ts) {
+            const d = Math.max(0, Math.min(0.05, (ts - lastTs) / 1000 || 0.016));
+            lastTs = ts;
+            t += d;
+            dt = d;
+            try {
+                drawFrame();
+            } catch (e) {
+                console.error("ascii-art:", e);
+            }
+            requestAnimationFrame(frame);
         }
 
         const ro = new ResizeObserver(() => {

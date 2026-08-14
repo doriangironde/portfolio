@@ -777,12 +777,10 @@ html[data-color-scheme="light"] .app-map .leaflet-tile {
   height: 100%;
   min-height: 0;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
   background-color: var(--surface-panel);
   border: 5px solid var(--surface-border);
   border-radius: 8px;
-  padding: 14px 14px 10px;
+  padding: 12px;
   box-shadow: var(--shadow-panel);
   overflow: hidden;
 }
@@ -790,9 +788,6 @@ html[data-color-scheme="light"] .app-map .leaflet-tile {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  background: color-mix(in srgb, var(--surface-muted) 55%, transparent);
-  border: 1px solid var(--surface-border-soft);
-  border-radius: 6px;
   overflow: hidden;
 }
 .ascii-art-canvas {
@@ -802,39 +797,4 @@ html[data-color-scheme="light"] .app-map .leaflet-tile {
   height: 100%;
   display: block;
   pointer-events: none;
-}
-.ascii-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid var(--surface-border-subtle);
-  padding-top: 8px;
-}
-.ascii-footer-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 1.6px;
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
-.ascii-live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #569f8c;
-  animation: ascii-dot-pulse 2.4s ease-in-out infinite;
-}
-@keyframes ascii-dot-pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-    transform: scale(0.85);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.1);
-  }
 }
