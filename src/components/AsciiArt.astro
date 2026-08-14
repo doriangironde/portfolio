@@ -51,10 +51,11 @@
         })();
 
         function readAccent() {
-            // follow the site's live accent color (--text-info), e.g. the
-            // "random" theme's generated hue
+            // follow the exact color of the "Hello I'm Dorian" highlight
+            // (--text-danger-strong); falls back to --text-info, then mint
             const cs = getComputedStyle(document.documentElement);
-            const v = cs.getPropertyValue("--text-info").trim();
+            let v = cs.getPropertyValue("--text-danger-strong").trim();
+            if (!v) v = cs.getPropertyValue("--text-info").trim();
             let m = v.match(/#([0-9a-f]{6})/i);
             if (m)
                 return [
