@@ -18,6 +18,7 @@ const QUERY = `
   query ($login: String!) {
     user(login: $login) {
       contributionsCollection {
+        restrictedContributionsCount
         contributionCalendar {
           totalContributions
           weeks {

@@ -84,7 +84,7 @@ function cellTitle(day: ContributionDay | null): string {
             /><h2 _ngcontent-ng-c1395484746="" class="section-title">GITHUB</h2>
         </div>
         <div _ngcontent-ng-c1395484746="" class="github-contributions">
-            <div class="contributions-graph" data-weeks={weekCount}>
+            <div class="contributions-graph">
                 <div class="grid-months">
                     {monthLabels.map((label) => (
                         <span class="grid-month">{label}</span>
@@ -92,7 +92,7 @@ function cellTitle(day: ContributionDay | null): string {
                 </div>
                 <div
                     class="grid-body"
-                    style={`grid-template-columns: 30px repeat(${weekCount}, var(--cell, 12px))`}
+                    style={`grid-template-columns: 30px repeat(${weekCount}, 12px)`}
                 >
                     {[0, 1, 2, 3, 4, 5, 6].map((row) => (
                         <>
@@ -116,28 +116,90 @@ function cellTitle(day: ContributionDay | null): string {
 
 <script is:inline>
     (() => {
-        // size the cells so the whole year fits the card, like GitHub's own calendar
-        const fit = () => {
-            const graph = document.querySelector(".contributions-graph");
-            if (!graph) return;
-            const weeks = Number(graph.dataset.weeks) || 53;
-            const width = graph.clientWidth - 20; // padding
-            const gap = 2;
-            const cell = Math.max(5, Math.min(12, Math.floor((width - 30 - weeks * gap) / weeks)));
-            graph.style.setProperty("--cell", cell + "px");
+        const scrollToEnd = () => {
+            const container = document.querySelector(
+                ".github-contributions",
+            );
+            if (!container) return;
+            container.scrollLeft = container.scrollWidth;
         };
         if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", fit);
+            document.addEventListener("DOMContentLoaded", scrollToEnd);
         } else {
-            fit();
+            scrollToEnd();
         }
-        window.addEventListener("load", fit);
-        window.addEventListener("resize", fit);
+        window.addEventListener("load", scrollToEnd);
+
+        // live refresh: always show the freshest calendar (private
+        // contributions included), without waiting for a rebuild
+        const levelOf = (count, qs) => {
+            if (count === 0) return 0;
+            if (count >= qs[3]) return 4;
+            if (count >= qs[2]) return 3;
+            if (count >= qs[1]) return 2;
+            return 1;
+        };
+        const refresh = async () => {
+            const graph = document.querySelector(".contributions-graph");
+            const cells = [...document.querySelectorAll(".grid-cell")];
+            if (!graph || !cells.length) return;
+            try {
+                const res = await fetch("/api/github-contributions", {
+                    cache: "no-store",
+                });
+                if (!res.ok) return;
+                const { calendar } = await res.json();
+                if (!calendar || !Array.isArray(calendar.weeks)) return;
+                const byDate = new Map();
+                const counts = [];
+                for (const week of calendar.weeks) {
+                    for (const day of week.contributionDays) {
+                        byDate.set(day.date, day.contributionCount);
+                        if (day.contributionCount > 0) counts.push(day.contributionCount);
+                    }
+                }
+                counts.sort((a, b) => a - b);
+                const n = counts.length;
+                const qs = [
+                    0,
+                    n ? counts[Math.floor(n * 0.25)] : 0,
+                    n ? counts[Math.floor(n * 0.5)] : 0,
+                    n ? counts[Math.floor(n * 0.75)] : 0,
+                ];
+                let changed = false;
+                for (const cell of cells) {
+                    const m = (cell.title || "").match(
+                        /([A-Z][a-z]{2} \d{1,2}, \d{4})/,
+                    );
+                    if (!m) continue;
+                    const date = new Date(m[1] + " 00:00:00");
+                    const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+                    const count = byDate.get(iso);
+                    if (count === undefined) continue;
+                    const level = levelOf(count, qs);
+                    const cls = level ? `grid-cell q${level}` : "grid-cell";
+                    if (cell.className !== cls) {
+                        cell.className = cls;
+                        changed = true;
+                    }
+                    const label = date.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                    });
+                    const title = `${count} ${count === 1 ? "contribution" : "contributions"} on ${label}`;
+                    if (cell.title !== title) cell.title = title;
+                }
+                if (changed) scrollToEnd();
+            } catch {}
+        };
+        window.addEventListener("load", () => setTimeout(refresh, 400));
     })();
 </script>
 
 <style>
     .contributions-graph {
+        min-width: 850px;
         padding: 8px 10px;
         background: var(--github-chart-background);
         border-radius: 6px;
@@ -145,14 +207,14 @@ function cellTitle(day: ContributionDay | null): string {
 
     .grid-months {
         display: flex;
-        gap: 2px;
+        gap: 3px;
         padding-left: 30px;
         height: 16px;
         margin-bottom: 3px;
     }
 
     .grid-month {
-        width: var(--cell, 12px);
+        width: 12px;
         font-size: 9px;
         line-height: 16px;
         color: var(--github-chart-label);
@@ -163,13 +225,13 @@ function cellTitle(day: ContributionDay | null): string {
     .grid-body {
         display: grid;
         grid-auto-flow: row;
-        gap: 2px;
+        gap: 3px;
     }
 
     .grid-day-label {
         width: 30px;
         font-size: 9px;
-        line-height: var(--cell, 12px);
+        line-height: 12px;
         color: var(--github-chart-label);
         text-align: left;
         overflow: visible;
@@ -177,9 +239,9 @@ function cellTitle(day: ContributionDay | null): string {
     }
 
     .grid-cell {
-        width: var(--cell, 12px);
-        height: var(--cell, 12px);
-        border-radius: 2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
         background: var(--github-chart-inactive);
     }
 
