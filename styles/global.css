@@ -488,7 +488,7 @@ html[data-color-scheme="dark"][_nghost-ng-c791777690] .navigation[_ngcontent-ng-
 }
 @media (max-width: 1024px) {
   .app-navigation[_nghost-ng-c791777690] { --nav-height: 64px; height: calc(var(--nav-height) + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); padding-inline: 0px; margin: 0px; contain: layout style; }
-  .navigation[_ngcontent-ng-c791777690] { height: 100%; padding: 6px; background-color: var(--surface-card); border: 1px solid var(--surface-border-subtle); border-top-width: 0px; border-radius: 0px 0px 8px 8px; box-shadow: var(--shadow-card); overflow: hidden; }
+  .navigation[_ngcontent-ng-c791777690] { height: 100%; padding: 6px; background-color: var(--surface-card); border: 1px solid var(--surface-border-subtle); border-top-width: 0px; border-radius: 0px; box-shadow: none; overflow: hidden; }
   .navigation[_ngcontent-ng-c791777690]::before, .navigation[_ngcontent-ng-c791777690]::after { content: none; }
   .nav-links[_ngcontent-ng-c791777690] { position: static; display: grid; grid-template-columns: repeat(5, minmax(0px, 1fr)) minmax(84px, 0.9fr); grid-template-rows: 1fr; gap: 6px; width: 100%; height: 100%; place-items: stretch; }
   .nav-actions[_ngcontent-ng-c791777690] { align-self: stretch; gap: 6px; width: auto; margin-left: 6px; padding-left: 8px; }
