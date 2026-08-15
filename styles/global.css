@@ -848,3 +848,13 @@ html[data-color-scheme="light"] .app-map .leaflet-tile {
 @media (max-width: 360px) {
   .lastfm[_ngcontent-ng-c2803322931]:hover .recent-tracks-stack[_ngcontent-ng-c2803322931] { transform: translate(-50%, -50%) scale(0.82); }
 }
+
+/* Mobile: normalize section spacing — kill desktop min-heights / margins that leak
+   through display:contents wrappers and create irregular gaps between cards. */
+@media (max-width: 1024px) {
+  .column-0[_ngcontent-ng-c2150733359] > .app-about-me[_ngcontent-ng-c2150733359],
+  .column-0[_ngcontent-ng-c2150733359] > .app-stuff-using[_ngcontent-ng-c2150733359] { min-height: 0px; }
+  .column-2[_ngcontent-ng-c2150733359] > .app-map[_ngcontent-ng-c2150733359] { margin-top: 0px; }
+  .app-link-row[_ngcontent-ng-c2150733359] { margin-top: 0px; margin-bottom: 0px; }
+  .projects[_ngcontent-ng-c3515322307] { margin-bottom: 0px; }
+}
