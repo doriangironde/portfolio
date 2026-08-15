@@ -24,3 +24,7 @@ See `.env.example`:
 
 - `/api/cron-rebuild` — Vercel cron job that redeploys the site daily so build-time data stays fresh
 - `/api/messages` — message board backed by `doriangironde/message-board` (`data/messages.json`)
+
+## Pi main menu
+
+This repo includes a project-local pi extension that replaces the startup header with a configurable greeting and ASCII-art welcome screen. See [`.pi/README.md`](.pi/README.md) for the available commands and configuration fields.

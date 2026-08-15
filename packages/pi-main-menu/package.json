@@ -1,0 +1,43 @@
+{
+  "name": "pi-main-menu",
+  "version": "0.1.0",
+  "description": "A configurable Pi startup welcome screen with greetings, ASCII art, and project context.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-extension",
+    "terminal",
+    "ascii-art"
+  ],
+  "author": {
+    "name": "Dorian Gironde",
+    "email": "doriangironde@users.noreply.github.com",
+    "url": "https://github.com/doriangironde"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doriangironde/portfolio.git",
+    "directory": "packages/pi-main-menu"
+  },
+  "bugs": {
+    "url": "https://github.com/doriangironde/portfolio/issues"
+  },
+  "homepage": "https://github.com/doriangironde/portfolio/tree/main/packages/pi-main-menu",
+  "files": [
+    "extensions",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  }
+}
