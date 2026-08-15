@@ -836,11 +836,15 @@ html[data-color-scheme="light"] .app-map .leaflet-tile {
   }
 }
 
-/* Touch devices: the LastFM fan-out is a hover interaction. Phones fire a sticky
-   :hover on tap, which fans the album arts outside the card and covers neighboring
-   sections. Keep the card static on coarse-pointer / no-hover devices. */
-@media (hover: none), (pointer: coarse) {
-  .lastfm[_ngcontent-ng-c2803322931]:hover .recent-track-item[_ngcontent-ng-c2803322931] { opacity: 0; }
-  .lastfm[_ngcontent-ng-c2803322931]:hover .track-info[_ngcontent-ng-c2803322931] { opacity: 1; }
-  .lastfm[_ngcontent-ng-c2803322931]:hover .main-overlay[_ngcontent-ng-c2803322931] { opacity: 0; }
+/* Mobile: keep the LastFM fan-out usable — phones fire sticky :hover on tap.
+   A 1:1 square card (phones) or a taller card (tablets) contains the fan so it
+   never overflows into neighboring sections. */
+@media (max-width: 480px) {
+  .lastfm[_ngcontent-ng-c2803322931] { height: auto; flex: 0 0 auto; aspect-ratio: 1 / 1; }
+}
+@media (min-width: 481px) and (max-width: 1024px) {
+  .lastfm[_ngcontent-ng-c2803322931] { height: 360px; flex: 0 0 auto; }
+}
+@media (max-width: 360px) {
+  .lastfm[_ngcontent-ng-c2803322931]:hover .recent-tracks-stack[_ngcontent-ng-c2803322931] { transform: translate(-50%, -50%) scale(0.82); }
 }
