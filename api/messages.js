@@ -12,7 +12,7 @@ const CACHE_TTL = 20000; // ms
 function ghHeaders() {
   return {
     Authorization: `Bearer ${process.env.GITHUB_TOKEN || ""}`,
-    "User-Agent": "digital-disk",
+    "User-Agent": "portfolio",
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
   };

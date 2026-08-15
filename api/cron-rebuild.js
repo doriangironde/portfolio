@@ -32,7 +32,7 @@ export default async function handler(req, res) {
           name: "siteperso",
           gitSource: {
             type: "github",
-            repoId: 1334463152, // doriangironde/digital-disk
+            repoId: 1334463152, // doriangironde/portfolio
             ref: "main",
           },
         }),

@@ -1,43 +1,26 @@
-# Astro Starter Kit: Minimal
+# Portfolio
+
+Personal portfolio of Dorian Gironde — founder of Nero, a web agency in Vichy, France, and future AI engineer.
+
+Built with [Astro](https://astro.build) and Tailwind CSS. The site shows projects, a GitHub contribution chart, what's currently playing on Last.fm, a photo map, and a message board.
+
+## Development
 
 ```sh
-npm create astro@latest -- --template minimal
+npm install
+npm run dev       # start dev server
+npm run build     # build to ./dist/
+npm run preview   # preview the build
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Environment variables
 
-## 🚀 Project Structure
+See `.env.example`:
 
-Inside of your Astro project, you'll see the following folders and files:
+- `GITHUB_TOKEN` / `GITHUB_USERNAME` — used at build time to render the contribution chart
+- `LASTFM_API_KEY` / `LASTFM_USERNAME` — Last.fm now-playing data
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+## API routes
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+- `/api/cron-rebuild` — Vercel cron job that redeploys the site daily so build-time data stays fresh
+- `/api/messages` — message board backed by `doriangironde/message-board` (`data/messages.json`)
