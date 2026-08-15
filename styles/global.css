@@ -339,8 +339,8 @@ body::-webkit-scrollbar-thumb:active, ::-webkit-scrollbar-thumb:active { backgro
   .column-0 > .app-ascii-art { min-height: 240px; }
 }
 @media (max-width: 1024px) {
-  .main-content[_ngcontent-ng-c2150733359] { flex-direction: column; height: auto; min-height: 100dvh; overflow-y: auto; padding: 96px max(12px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); display: block; }
-  .app-navigation[_ngcontent-ng-c2150733359] { position: fixed; top: max(12px,env(safe-area-inset-top)); left: max(12px,env(safe-area-inset-left)); right: max(12px,env(safe-area-inset-right)); width: auto; z-index: 1000; }
+  .main-content[_ngcontent-ng-c2150733359] { flex-direction: column; height: auto; min-height: 100dvh; overflow-y: auto; padding: calc(84px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); display: block; }
+  .app-navigation[_ngcontent-ng-c2150733359] { position: fixed; top: 0px; left: 0px; right: 0px; width: auto; z-index: 1100; }
   .bento-grid[_ngcontent-ng-c2150733359] { display: flex; flex-direction: column; height: auto; gap: 20px; align-items: stretch; }
   .column[_ngcontent-ng-c2150733359], .home-grid[_ngcontent-ng-c2150733359], .columns-top[_ngcontent-ng-c2150733359] { display: flex; flex-direction: column; gap: 20px; height: auto; width: 100%; }
   .home-grid[_ngcontent-ng-c2150733359] { border-width: medium; border-style: none; border-color: currentcolor; border-image: none; }
@@ -487,8 +487,8 @@ html[data-color-scheme="dark"][_nghost-ng-c791777690] .navigation[_ngcontent-ng-
   .nav-links[_ngcontent-ng-c791777690] { column-gap: 16px; }
 }
 @media (max-width: 1024px) {
-  .app-navigation[_nghost-ng-c791777690] { --nav-height: 64px; height: var(--nav-height); padding-inline: 0px; margin: 0px; contain: layout style; }
-  .navigation[_ngcontent-ng-c791777690] { height: 100%; padding: 6px; background-color: var(--surface-card); border: 1px solid var(--surface-border-subtle); border-radius: 8px; box-shadow: var(--shadow-card); overflow: hidden; }
+  .app-navigation[_nghost-ng-c791777690] { --nav-height: 64px; height: calc(var(--nav-height) + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); padding-inline: 0px; margin: 0px; contain: layout style; }
+  .navigation[_ngcontent-ng-c791777690] { height: 100%; padding: 6px; background-color: var(--surface-card); border: 1px solid var(--surface-border-subtle); border-top-width: 0px; border-radius: 0px 0px 8px 8px; box-shadow: var(--shadow-card); overflow: hidden; }
   .navigation[_ngcontent-ng-c791777690]::before, .navigation[_ngcontent-ng-c791777690]::after { content: none; }
   .nav-links[_ngcontent-ng-c791777690] { position: static; display: grid; grid-template-columns: repeat(5, minmax(0px, 1fr)) minmax(84px, 0.9fr); grid-template-rows: 1fr; gap: 6px; width: 100%; height: 100%; place-items: stretch; }
   .nav-actions[_ngcontent-ng-c791777690] { align-self: stretch; gap: 6px; width: auto; margin-left: 6px; padding-left: 8px; }
