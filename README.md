@@ -1,8 +1,8 @@
 # Portfolio
 
-Personal portfolio of Dorian Gironde — founder of Nero, a web agency in Vichy, France, and future AI engineer.
+My personal portfolio :rocket:
 
-Built with [Astro](https://astro.build) and Tailwind CSS. The site shows projects, a GitHub contribution chart, what's currently playing on Last.fm, a photo map, and a message board.
+Built with [Astro](https://astro.build) and Tailwind CSS.
 
 ## Development
 
