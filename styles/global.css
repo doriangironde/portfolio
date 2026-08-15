@@ -835,3 +835,12 @@ html[data-color-scheme="light"] .app-map .leaflet-tile {
     transform: scale(0.8);
   }
 }
+
+/* Touch devices: the LastFM fan-out is a hover interaction. Phones fire a sticky
+   :hover on tap, which fans the album arts outside the card and covers neighboring
+   sections. Keep the card static on coarse-pointer / no-hover devices. */
+@media (hover: none), (pointer: coarse) {
+  .lastfm[_ngcontent-ng-c2803322931]:hover .recent-track-item[_ngcontent-ng-c2803322931] { opacity: 0; }
+  .lastfm[_ngcontent-ng-c2803322931]:hover .track-info[_ngcontent-ng-c2803322931] { opacity: 1; }
+  .lastfm[_ngcontent-ng-c2803322931]:hover .main-overlay[_ngcontent-ng-c2803322931] { opacity: 0; }
+}
