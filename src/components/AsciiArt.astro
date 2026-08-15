@@ -22,15 +22,15 @@
             "(prefers-reduced-motion: reduce)",
         ).matches;
 
-        const N_SURFACE = 640; // hundreds of tiny particles
-        const N_ORBIT = 12; // orbiting just outside the surface
-        const N_DISTANT = 26; // restrained background field
-        const N_DRIFT = 6; // drift away and return
+        const N_SURFACE = 640;
+        const N_ORBIT = 12;
+        const N_DISTANT = 26;
+        const N_DRIFT = 6;
 
         let W = 0,
             H = 0,
             dpr = 1;
-        let ACC = [86, 159, 140]; // Dorian highlight color (live)
+        let ACC = [86, 159, 140];
         let surface = [],
             orbiters = [],
             distant = [];
@@ -54,7 +54,6 @@
         })();
 
         function readDorian() {
-            // the exact color of the "Hello I'm Dorian" highlight
             const cs = getComputedStyle(document.documentElement);
             let v = cs.getPropertyValue("--text-danger-strong").trim();
             if (!v) v = cs.getPropertyValue("--text-info").trim();
@@ -89,7 +88,6 @@
         };
 
         function build() {
-            // ---- sphere surface (fibonacci distribution + organic noise) ----
             surface = [];
             const ga = Math.PI * (3 - Math.sqrt(5));
             for (let i = 0; i < N_SURFACE; i++) {
@@ -98,13 +96,12 @@
                 const th = i * ga;
                 let x = rad * Math.cos(th),
                     z = rad * Math.sin(th);
-                // low-frequency displacement → gentle lumps, organic density
                 const p = 0.05;
                 x += p * Math.sin(y * 5.1 + i * 0.31) * Math.cos(th * 3.1 + i * 0.13);
                 z += p * Math.cos(y * 4.3 + i * 0.53) * Math.sin(th * 2.7 + i * 0.21);
                 const yy = y + p * Math.sin(y * 3.7 + i * 0.7);
                 const len = Math.hypot(x, yy, z) || 1;
-                const energy = i % 46 === 0; // bright points of energy (~14)
+                const energy = i % 46 === 0;
                 surface.push({
                     bx: x / len,
                     by: yy / len,
@@ -122,7 +119,6 @@
                 });
             }
 
-            // ---- orbiters around the surface ----
             orbiters = [];
             for (let i = 0; i < N_ORBIT; i++) {
                 const axis = randUnit();
@@ -147,7 +143,6 @@
                 });
             }
 
-            // ---- distant field (very restrained) ----
             distant = [];
             for (let i = 0; i < N_DISTANT; i++) {
                 distant.push({
@@ -178,15 +173,13 @@
             }
         }
 
-        const F = 3.0; // perspective
-        const LIGHT = [-0.36, -0.72, 0.55]; // upper-left light
+        const F = 3.0;
+        const LIGHT = [-0.36, -0.72, 0.55];
         const DARK_MODE = () =>
             document.documentElement.dataset.colorScheme === "dark";
 
-        // every particle in the Dorian hue — shaded by depth & light
         function particleColor(shade) {
             const a = ACC;
-            // lit: full hue slightly deepened; unlit: faded toward bg
             const lit = [a[0] * 0.84, a[1] * 0.84, a[2] * 0.84];
             const bg = DARK_MODE() ? [12, 12, 14] : [255, 255, 255];
             const unlit = [
@@ -206,12 +199,10 @@
 
             const h = smooth(hover);
 
-            // sphere sits in a 2:3 portrait region, centered
             const RAD = Math.min(0.42 * Math.min(W, H * 0.86), 0.36 * W, 0.4 * H);
             const cx0 = W / 2,
                 cy0 = H * 0.47;
 
-            // soft glow behind the sphere on hover
             if (h > 0.01) {
                 if (!glowGrad) {
                     const g = ctx.createRadialGradient(
@@ -234,7 +225,6 @@
                 ctx.globalAlpha = 1;
             }
 
-            // distant field
             for (const d of distant) {
                 const a = 0.05 + 0.06 * (0.5 + 0.5 * Math.sin(t * d.tw + d.ph));
                 ctx.globalAlpha = a;
@@ -244,7 +234,6 @@
             }
             ctx.globalAlpha = 1;
 
-            // rotation (slow yaw + gentle wobble, barely faster on hover)
             const ry = t * (0.11 + 0.05 * h),
                 cyr = Math.cos(ry),
                 sy = Math.sin(ry);
@@ -255,11 +244,9 @@
                 czr = Math.cos(rzp),
                 szr = Math.sin(rzp);
 
-            // breathing
             const brG = 1 + 0.03 * Math.sin(t * 0.42);
 
             for (const p of surface) {
-                // rotate base direction
                 let x = p.bx * cyr + p.bz * sy;
                 let z = -p.bx * sy + p.bz * cyr;
                 let y = p.by * cxr - z * sxr;
@@ -268,7 +255,6 @@
                 y = -x * szr + y * czr;
                 x = x2;
 
-                // energy points glide across the surface
                 if (p.energy) {
                     const [ax, ay, az] = p.eAxis;
                     const a = p.eSpeed * t;
@@ -291,14 +277,12 @@
                     y = ny;
                 }
 
-                // breathing + organic radius
                 let rad =
                     brG *
                     (1 +
                         0.035 * Math.sin(t * 0.5 + p.ph) +
                         0.02 * Math.sin(t * 0.31 + p.ph * 1.7));
 
-                // drift away and return
                 const d = p.drift;
                 if (d) {
                     d.timer -= dt;
@@ -343,20 +327,17 @@
                 const depth = (z * rad + 1.35) / 2.7;
                 const alpha = 0.26 + 0.66 * Math.min(1, Math.max(0, depth));
 
-                // lighting
                 const L = x * LIGHT[0] + y * LIGHT[1] + z * LIGHT[2];
                 const shade = Math.min(1, Math.max(0, (1 - L) / 0.75)) * 0.8;
                 const size = 1.7 * scale * (0.72 + 0.5 * depth) * p.sizeJ;
 
                 if (p.energy) {
                     const pulse = 0.55 + 0.4 * (0.5 + 0.5 * Math.sin(t * 1.15 + p.ph));
-                    // halo
                     ctx.globalAlpha = alpha * pulse * 0.12;
                     ctx.fillStyle = `rgb(${ACC[0]},${ACC[1]},${ACC[2]})`;
                     ctx.beginPath();
                     ctx.arc(sx, sy2, size * 4.5, 0, 6.2832);
                     ctx.fill();
-                    // core
                     ctx.globalAlpha = Math.min(1, alpha * pulse);
                     ctx.beginPath();
                     ctx.arc(sx, sy2, size * 1.5, 0, 6.2832);
@@ -371,7 +352,6 @@
             }
             ctx.globalAlpha = 1;
 
-            // orbiters
             for (const o of orbiters) {
                 const a = t * o.speed + o.ph;
                 const c = Math.cos(a),
@@ -380,7 +360,6 @@
                 let x = o.ref[0] * c + o.w[0] * s + o.axis[0] * o.c * C;
                 let y = o.ref[1] * c + o.w[1] * s + o.axis[1] * o.c * C;
                 const z = o.ref[2] * c + o.w[2] * s + o.axis[2] * o.c * C;
-                // same world rotation
                 const x1 = x * cyr + z * sy;
                 const z1 = -x * sy + z * cyr;
                 x = x1;

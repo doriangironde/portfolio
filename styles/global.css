@@ -778,7 +778,6 @@ html[data-color-scheme="light"] .app-map .leaflet-tile {
   filter: saturate(0.18) brightness(1.03) contrast(0.92);
 }
 
-/* ---------- generative ASCII field card ---------- */
 .ascii-art-card {
   height: 100%;
   min-height: 0;
@@ -805,7 +804,6 @@ html[data-color-scheme="light"] .app-map .leaflet-tile {
   pointer-events: none;
 }
 
-/* message board: loading / empty / sending states */
 .board-state {
   text-align: center;
   color: var(--text-glass-subtle);

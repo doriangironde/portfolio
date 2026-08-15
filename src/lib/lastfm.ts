@@ -98,7 +98,6 @@ async function fetchDeezerCover(
 				return cover;
 			}
 		} catch {
-			// try the next artist query
 		}
 	}
 

@@ -1,13 +1,8 @@
-// Vercel serverless function — message board API backed by a private
-// GitHub repo (doriangironde/message-board, data/messages.json).
-//
-// Requires the GITHUB_TOKEN environment variable (already configured).
-
 const REPO = "doriangironde/message-board";
 const PATH = "data/messages.json";
 const API = `https://api.github.com/repos/${REPO}/contents/${PATH}`;
 const MAX_MESSAGES = 200;
-const CACHE_TTL = 20000; // ms
+const CACHE_TTL = 20000;
 
 function ghHeaders() {
   return {
@@ -18,8 +13,6 @@ function ghHeaders() {
   };
 }
 
-// small module-level cache — GitHub's contents API caches for ~60s,
-// so we serve our own copy and refresh it in the background
 let cache = { messages: null, sha: null, at: 0 };
 
 async function rawRead() {
@@ -56,11 +49,9 @@ async function writeStore(messages, sha) {
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`GitHub write failed: ${res.status}`);
-  // keep serving the new state immediately
   cache = { messages, sha: null, at: Date.now() };
 }
 
-// per-instance rate limiting (instances are short-lived; good enough)
 const recent = new Map();
 
 export default async function handler(req, res) {
@@ -84,7 +75,6 @@ export default async function handler(req, res) {
       let author = String(req.body?.author || "").trim().slice(0, 40);
       if (!text) return res.status(400).json({ error: "Message is empty." });
       if (!author) author = "Anonymous";
-      // keep it plain text
       text = text.replace(/[<>&]/g, "");
       author = author.replace(/[<>&]/g, "");
 
@@ -101,7 +91,6 @@ export default async function handler(req, res) {
           recent.set(ip, now);
           return res.status(201).json({ message: msg });
         } catch (e) {
-          // concurrent edit — re-read and retry once
           cache.at = 0;
           if (attempt === 1) throw e;
         }

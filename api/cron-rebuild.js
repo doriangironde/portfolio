@@ -1,13 +1,4 @@
-// Vercel cron job — rebuilds the site daily so build-time data
-// (LastFM, GitHub contributions) stays fresh.
-//
-// Requires env vars:
-//   CRON_SECRET   — matched against the Authorization header Vercel sends
-//   VERCEL_TOKEN  — API token with deploy access
-//   VERCEL_TEAM_ID / VERCEL_PROJECT_ID — target project
-
 export default async function handler(req, res) {
-  // Vercel cron invocations carry "Authorization: Bearer <CRON_SECRET>"
   const secret = process.env.CRON_SECRET;
   if (secret && req.headers.authorization !== `Bearer ${secret}`) {
     return res.status(401).json({ error: "unauthorized" });
@@ -32,7 +23,7 @@ export default async function handler(req, res) {
           name: "siteperso",
           gitSource: {
             type: "github",
-            repoId: 1334463152, // doriangironde/portfolio
+            repoId: 1334463152,
             ref: "main",
           },
         }),

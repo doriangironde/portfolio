@@ -130,8 +130,6 @@ function cellTitle(day: ContributionDay | null): string {
         }
         window.addEventListener("load", scrollToEnd);
 
-        // live refresh: always show the freshest calendar (private
-        // contributions included), without waiting for a rebuild
         const levelOf = (count, qs) => {
             if (count === 0) return 0;
             if (count >= qs[3]) return 4;

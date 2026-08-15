@@ -1,8 +1,3 @@
-// Vercel serverless function — fresh GitHub contribution calendar.
-// Includes private contributions (the account has "include private
-// contributions" enabled, so restrictedContributionsCount is non-null
-// and forces the full calendar to be computed).
-
 const QUERY = `
   query ($login: String!) {
     user(login: $login) {
@@ -56,7 +51,6 @@ export default async function handler(req, res) {
     const calendar =
       payload.data.user.contributionsCollection.contributionCalendar;
 
-    // assign quartile levels (mirrors src/lib/github-contributions.ts)
     const counts = calendar.weeks
       .flatMap((week) =>
         week.contributionDays.map((day) => day.contributionCount),
